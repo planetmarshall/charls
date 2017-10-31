@@ -8,21 +8,33 @@
 
 #include "util.h"
 #include "processline.h"
-#include <memory>
 #include "jpegmarkercode.h"
+#include <memory>
+
+
+class CodecBase
+{
+public:
+    JlsParameters& Info() noexcept
+    {
+        return _params;
+    }
+
+protected:
+    explicit CodecBase(const JlsParameters& params) :
+        _params(params)
+    {
+    }
+
+    JlsParameters _params;
+};
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
-class DecoderStrategy
+class DecoderStrategy : public CodecBase
 {
 public:
     explicit DecoderStrategy(const JlsParameters& params) :
-        _params(params),
-        _byteStream(nullptr),
-        _readCache(0),
-        _validBits(0),
-        _position(nullptr),
-        _nextFFPosition(nullptr),
-        _endPosition(nullptr)
+        CodecBase(params)
     {
     }
 
@@ -286,7 +298,6 @@ public:
     }
 
 protected:
-    JlsParameters _params;
     std::unique_ptr<ProcessLine> _processLine;
 
 private:
@@ -294,14 +305,14 @@ private:
     static constexpr size_t bufType_bit_count = sizeof(bufType) * 8;
 
     std::vector<uint8_t> _buffer;
-    std::basic_streambuf<char>* _byteStream;
+    std::basic_streambuf<char>* _byteStream{};
 
     // decoding
-    bufType _readCache;
-    int32_t _validBits;
-    uint8_t* _position;
-    uint8_t* _nextFFPosition;
-    uint8_t* _endPosition;
+    bufType _readCache{};
+    int32_t _validBits{};
+    uint8_t* _position{};
+    uint8_t* _nextFFPosition{};
+    uint8_t* _endPosition{};
 };
 
 

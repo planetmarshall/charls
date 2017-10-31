@@ -10,19 +10,12 @@
 
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
-class EncoderStrategy
+class EncoderStrategy : public CodecBase
 {
 
 public:
     explicit EncoderStrategy(const JlsParameters& params) :
-        _params(params),
-        _bitBuffer(0),
-        _freeBitCount(sizeof(_bitBuffer) * 8),
-        _compressedLength(0),
-        _position(nullptr),
-        _isFFWritten(false),
-        _bytesWritten(0),
-        _compressedStream(nullptr)
+        CodecBase(params)
     {
     }
 
@@ -178,22 +171,20 @@ protected:
     }
 
     std::unique_ptr<DecoderStrategy> _qdecoder;
-
-    JlsParameters _params;
     std::unique_ptr<ProcessLine> _processLine;
 
 private:
-    unsigned int _bitBuffer;
-    int32_t _freeBitCount;
-    std::size_t _compressedLength;
+    unsigned int _bitBuffer{};
+    int32_t _freeBitCount{sizeof(_bitBuffer) * 8};
+    std::size_t _compressedLength{};
 
     // encoding
-    uint8_t* _position;
-    bool _isFFWritten;
-    std::size_t _bytesWritten;
+    uint8_t* _position{};
+    bool _isFFWritten{};
+    std::size_t _bytesWritten{};
 
     std::vector<uint8_t> _buffer;
-    std::basic_streambuf<char>* _compressedStream;
+    std::basic_streambuf<char>* _compressedStream{};
 };
 
 #endif

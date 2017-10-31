@@ -128,9 +128,9 @@ public:
         _currentLine(),
         _pquant(nullptr)
     {
-        if (Info().interleaveMode == InterleaveMode::None)
+        if (Strategy::Info().interleaveMode == InterleaveMode::None)
         {
-            Info().components = 1;
+            Strategy::Info().components = 1;
         }
     }
 
@@ -146,18 +146,13 @@ public:
 
     bool IsInterleaved() noexcept
     {
-        if (Info().interleaveMode == InterleaveMode::None)
+        if (Strategy::Info().interleaveMode == InterleaveMode::None)
             return false;
 
-        if (Info().components == 1)
+        if (Strategy::Info().components == 1)
             return false;
 
         return true;
-    }
-
-    JlsParameters& Info() noexcept
-    {
-        return Strategy::_params;
     }
 
     signed char QuantizeGratientOrg(int32_t Di) const noexcept;
@@ -672,12 +667,12 @@ template<typename Traits, typename Strategy>
 void JlsCodec<Traits, Strategy>::DoScan()
 {
     const int32_t pixelstride = _width + 4;
-    const int components = Info().interleaveMode == charls::InterleaveMode::Line ? Info().components : 1;
+    const int components = Strategy::Info().interleaveMode == charls::InterleaveMode::Line ? Strategy::Info().components : 1;
 
     std::vector<PIXEL> vectmp(2 * components * pixelstride);
     std::vector<int32_t> rgRUNindex(components);
 
-    for (int32_t line = 0; line < Info().height; ++line)
+    for (int32_t line = 0; line < Strategy::Info().height; ++line)
     {
         _previousLine = &vectmp[1];
         _currentLine = &vectmp[1 + components * pixelstride];
@@ -719,38 +714,38 @@ std::unique_ptr<ProcessLine> JlsCodec<Traits, Strategy>::CreateProcess(ByteStrea
     if (!IsInterleaved())
     {
         return info.rawData ?
-            std::unique_ptr<ProcessLine>(std::make_unique<PostProcesSingleComponent>(info.rawData, Info(), sizeof(typename Traits::PIXEL))) :
-            std::unique_ptr<ProcessLine>(std::make_unique<PostProcesSingleStream>(info.rawStream, Info(), sizeof(typename Traits::PIXEL)));
+            std::unique_ptr<ProcessLine>(std::make_unique<PostProcesSingleComponent>(info.rawData, Strategy::Info(), sizeof(typename Traits::PIXEL))) :
+            std::unique_ptr<ProcessLine>(std::make_unique<PostProcesSingleStream>(info.rawStream, Strategy::Info(), sizeof(typename Traits::PIXEL)));
     }
 
-    if (Info().colorTransformation == ColorTransformation::None)
-        return std::make_unique<ProcessTransformed<TransformNone<typename Traits::SAMPLE>>>(info, Info(), TransformNone<SAMPLE>());
+    if (Strategy::Info().colorTransformation == ColorTransformation::None)
+        return std::make_unique<ProcessTransformed<TransformNone<typename Traits::SAMPLE>>>(info, Strategy::Info(), TransformNone<SAMPLE>());
 
-    if (Info().bitsPerSample == sizeof(SAMPLE) * 8)
+    if (Strategy::Info().bitsPerSample == sizeof(SAMPLE) * 8)
     {
-        switch (Info().colorTransformation)
+        switch (Strategy::Info().colorTransformation)
         {
-            case ColorTransformation::HP1: return std::make_unique<ProcessTransformed<TransformHp1<SAMPLE>>>(info, Info(), TransformHp1<SAMPLE>());
-            case ColorTransformation::HP2: return std::make_unique<ProcessTransformed<TransformHp2<SAMPLE>>>(info, Info(), TransformHp2<SAMPLE>());
-            case ColorTransformation::HP3: return std::make_unique<ProcessTransformed<TransformHp3<SAMPLE>>>(info, Info(), TransformHp3<SAMPLE>());
+            case ColorTransformation::HP1: return std::make_unique<ProcessTransformed<TransformHp1<SAMPLE>>>(info, Strategy::Info(), TransformHp1<SAMPLE>());
+            case ColorTransformation::HP2: return std::make_unique<ProcessTransformed<TransformHp2<SAMPLE>>>(info, Strategy::Info(), TransformHp2<SAMPLE>());
+            case ColorTransformation::HP3: return std::make_unique<ProcessTransformed<TransformHp3<SAMPLE>>>(info, Strategy::Info(), TransformHp3<SAMPLE>());
             default:
                 std::ostringstream message;
-                message << "Color transformation " << Info().colorTransformation << " is not supported.";
+                message << "Color transformation " << Strategy::Info().colorTransformation << " is not supported.";
                 throw charls_error(ApiResult::UnsupportedColorTransform, message.str());
         }
     }
 
-    if (Info().bitsPerSample > 8)
+    if (Strategy::Info().bitsPerSample > 8)
     {
-        const int shift = 16 - Info().bitsPerSample;
-        switch (Info().colorTransformation)
+        const int shift = 16 - Strategy::Info().bitsPerSample;
+        switch (Strategy::Info().colorTransformation)
         {
-            case ColorTransformation::HP1: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp1<uint16_t>>>>(info, Info(), TransformShifted<TransformHp1<uint16_t>>(shift));
-            case ColorTransformation::HP2: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp2<uint16_t>>>>(info, Info(), TransformShifted<TransformHp2<uint16_t>>(shift));
-            case ColorTransformation::HP3: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp3<uint16_t>>>>(info, Info(), TransformShifted<TransformHp3<uint16_t>>(shift));
+            case ColorTransformation::HP1: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp1<uint16_t>>>>(info, Strategy::Info(), TransformShifted<TransformHp1<uint16_t>>(shift));
+            case ColorTransformation::HP2: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp2<uint16_t>>>>(info, Strategy::Info(), TransformShifted<TransformHp2<uint16_t>>(shift));
+            case ColorTransformation::HP3: return std::make_unique<ProcessTransformed<TransformShifted<TransformHp3<uint16_t>>>>(info, Strategy::Info(), TransformShifted<TransformHp3<uint16_t>>(shift));
             default:
                 std::ostringstream message;
-                message << "Color transformation " << Info().colorTransformation << " is not supported.";
+                message << "Color transformation " << Strategy::Info().colorTransformation << " is not supported.";
                 throw charls_error(ApiResult::UnsupportedColorTransform, message.str());
         }
     }
