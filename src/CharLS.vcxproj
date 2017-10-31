@@ -291,6 +291,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="charls.h" />
+    <ClInclude Include="codecbase.h" />
     <ClInclude Include="colortransform.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="context.h" />

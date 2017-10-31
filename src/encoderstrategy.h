@@ -5,9 +5,12 @@
 #ifndef CHARLS_ENCODERSTRATEGY
 #define CHARLS_ENCODERSTRATEGY
 
+#include "codecbase.h"
 #include "processline.h"
-#include "decoderstrategy.h"
+#include "jpegmarkercode.h"
 
+namespace charls
+{
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
 class EncoderStrategy : public CodecBase
@@ -19,9 +22,7 @@ public:
     {
     }
 
-    virtual ~EncoderStrategy()
-    {
-    }
+    virtual ~EncoderStrategy() = default;
 
     int32_t PeekByte();
 
@@ -34,11 +35,18 @@ public:
     {
     }
 
-    virtual void SetPresets(const JpegLSPresetCodingParameters& presets) = 0;
-
-    virtual std::size_t EncodeScan(std::unique_ptr<ProcessLine> rawData, ByteStreamInfo& compressedData) = 0;
-
     virtual std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) = 0;
+    virtual void DoScan() = 0;
+
+    size_t EncodeScan(std::unique_ptr<ProcessLine> processLine, ByteStreamInfo& compressedData)
+    {
+        _processLine = std::move(processLine);
+
+        Init(compressedData);
+        DoScan();
+
+        return GetLength();
+    }
 
 protected:
 
@@ -64,7 +72,6 @@ protected:
     void AppendToBitStream(int32_t bits, int32_t bitCount)
     {
         ASSERT(bitCount < 32 && bitCount >= 0);
-        ASSERT((!_qdecoder) || (bitCount == 0 && bits == 0) ||( _qdecoder->ReadLongValue(bitCount) == bits));
 #ifndef NDEBUG
         const int mask = (1u << (bitCount)) - 1;
         ASSERT((bits | mask) == mask); // Not used bits must be set to zero.
@@ -170,7 +177,6 @@ protected:
         AppendToBitStream((1 << length) - 1, length);
     }
 
-    std::unique_ptr<DecoderStrategy> _qdecoder;
     std::unique_ptr<ProcessLine> _processLine;
 
 private:
@@ -187,4 +193,5 @@ private:
     std::basic_streambuf<char>* _compressedStream{};
 };
 
+}
 #endif

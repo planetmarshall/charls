@@ -109,7 +109,7 @@ constexpr int32_t ComputeContextID(int32_t Q1, int32_t Q2, int32_t Q3)
 
 
 template<typename Strategy, typename Traits>
-class JlsCodec : public Strategy
+class JlsCodec final : public Strategy
 {
 public:
     using PIXEL = typename Traits::PIXEL;
@@ -119,9 +119,6 @@ public:
         Strategy(params),
         traits(inTraits),
         _width(params.width),
-        T1(0),
-        T2(0),
-        T3(0),
         _RUNindex(0),
         _previousLine(),
         _currentLine(),
@@ -133,7 +130,7 @@ public:
         }
     }
 
-    void SetPresets(const JpegLSPresetCodingParameters& presets)
+    void SetPresets(const JpegLSPresetCodingParameters& presets) override
     {
         const JpegLSPresetCodingParameters presetDefault = ComputeDefault(traits.MAXVAL, traits.NEAR);
 
@@ -141,17 +138,6 @@ public:
                    presets.Threshold2 != 0 ? presets.Threshold2 : presetDefault.Threshold2,
                    presets.Threshold3 != 0 ? presets.Threshold3 : presetDefault.Threshold3,
                    presets.ResetValue != 0 ? presets.ResetValue : presetDefault.ResetValue);
-    }
-
-    bool IsInterleaved() noexcept
-    {
-        if (Strategy::Info().interleaveMode == InterleaveMode::None)
-            return false;
-
-        if (Strategy::Info().components == 1)
-            return false;
-
-        return true;
     }
 
     signed char QuantizeGratientOrg(int32_t Di) const noexcept;
@@ -182,14 +168,13 @@ public:
     SAMPLE DecodeRIPixel(int32_t Ra, int32_t Rb);
     int32_t DecodeRunPixels(PIXEL Ra, PIXEL* ptype, int32_t cpixelMac);
     int32_t DoRunMode(int32_t index, DecoderStrategy*);
+    FORCE_INLINE SAMPLE DoRegular(int32_t Qs, int32_t, int32_t pred, DecoderStrategy*);
 
     void EncodeRIError(CContextRunMode& ctx, int32_t Errval);
     SAMPLE EncodeRIPixel(int32_t x, int32_t Ra, int32_t Rb);
     Triplet<SAMPLE> EncodeRIPixel(Triplet<SAMPLE> x, Triplet<SAMPLE> Ra, Triplet<SAMPLE> Rb);
     void EncodeRunPixels(int32_t runLength, bool bEndofline);
     int32_t DoRunMode(int32_t index, EncoderStrategy*);
-
-    FORCE_INLINE SAMPLE DoRegular(int32_t Qs, int32_t, int32_t pred, DecoderStrategy*);
     FORCE_INLINE SAMPLE DoRegular(int32_t Qs, int32_t x, int32_t pred, EncoderStrategy*);
 
     void DoLine(SAMPLE* pdummy);
@@ -199,16 +184,13 @@ public:
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo);
     void InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t nReset);
 
-    size_t EncodeScan(std::unique_ptr<ProcessLine> rawData, ByteStreamInfo& compressedData);
-    void DecodeScan(std::unique_ptr<ProcessLine> rawData, const JlsRect& size, ByteStreamInfo& compressedData);
-
-protected:
+private:
     // codec parameters
     Traits traits;
     int _width;
-    int32_t T1;
-    int32_t T2;
-    int32_t T3;
+    int32_t T1{};
+    int32_t T2{};
+    int32_t T3{};
 
     // compression context
     JlsContext _contexts[365];
@@ -705,7 +687,7 @@ void JlsCodec<Strategy, Traits>::DoScan()
 template<typename Strategy, typename Traits>
 std::unique_ptr<ProcessLine> JlsCodec<Strategy, Traits>::CreateProcess(ByteStreamInfo info)
 {
-    if (!IsInterleaved())
+    if (!Strategy::IsInterleaved())
     {
         return info.rawData ?
             std::unique_ptr<ProcessLine>(std::make_unique<PostProcesSingleComponent>(info.rawData, Strategy::Info(), sizeof(typename Traits::PIXEL))) :
@@ -746,35 +728,6 @@ std::unique_ptr<ProcessLine> JlsCodec<Strategy, Traits>::CreateProcess(ByteStrea
 
     throw charls_error(ApiResult::UnsupportedBitDepthForTransform);
 }
-
-
-// Setup codec for encoding and calls DoScan
-template<typename Strategy, typename Traits>
-size_t JlsCodec<Strategy, Traits>::EncodeScan(std::unique_ptr<ProcessLine> processLine, ByteStreamInfo& compressedData)
-{
-    Strategy::_processLine = std::move(processLine);
-
-    Strategy::Init(compressedData);
-    DoScan();
-
-    return Strategy::GetLength();
-}
-
-
-// Setup codec for decoding and calls DoScan
-template<typename Strategy, typename Traits>
-void JlsCodec<Strategy, Traits>::DecodeScan(std::unique_ptr<ProcessLine> processLine, const JlsRect& rect, ByteStreamInfo& compressedData)
-{
-    Strategy::_processLine = std::move(processLine);
-
-    uint8_t* compressedBytes = const_cast<uint8_t*>(static_cast<const uint8_t*>(compressedData.rawData));
-    Strategy::_rect = rect;
-
-    Strategy::Init(compressedData);
-    DoScan();
-    SkipBytes(compressedData, Strategy::GetCurBytePos() - compressedBytes);
-}
-
 
 // Initialize the codec data structures. Depends on JPEG-LS parameters like Threshold1-Threshold3.
 template<typename Strategy, typename Traits>

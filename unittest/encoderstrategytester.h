@@ -18,11 +18,6 @@ public:
     {
     }
 
-    size_t EncodeScan(std::unique_ptr<ProcessLine>, ByteStreamInfo&) override
-    {
-        return 0;
-    }
-
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo) override
     {
         return nullptr;

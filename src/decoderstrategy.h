@@ -9,26 +9,11 @@
 #include "util.h"
 #include "processline.h"
 #include "jpegmarkercode.h"
+#include "codecbase.h"
 #include <memory>
 
-
-class CodecBase
+namespace charls
 {
-public:
-    JlsParameters& Info() noexcept
-    {
-        return _params;
-    }
-
-protected:
-    explicit CodecBase(const JlsParameters& params) :
-        _params(params)
-    {
-    }
-
-    JlsParameters _params;
-    JlsRect _rect{};
-};
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
 class DecoderStrategy : public CodecBase
@@ -43,7 +28,6 @@ public:
 
     virtual std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) = 0;
 
-    virtual void SetPresets(const JpegLSPresetCodingParameters& presets) = 0;
     virtual void DoScan() = 0;
 
     void DecodeScan(std::unique_ptr<ProcessLine> processLine, const JlsRect& rect, ByteStreamInfo& compressedData)
@@ -328,5 +312,5 @@ private:
     uint8_t* _endPosition{};
 };
 
-
+}
 #endif
