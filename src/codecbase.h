@@ -26,6 +26,8 @@ protected:
     {
     }
 
+    virtual ~CodecBase() = default;
+
     bool IsInterleaved() noexcept
     {
         if (Info().interleaveMode == InterleaveMode::None)

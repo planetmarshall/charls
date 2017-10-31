@@ -15,23 +15,9 @@ namespace charls
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
 class EncoderStrategy : public CodecBase
 {
-
 public:
     explicit EncoderStrategy(const JlsParameters& params) :
         CodecBase(params)
-    {
-    }
-
-    virtual ~EncoderStrategy() = default;
-
-    int32_t PeekByte();
-
-    void OnLineBegin(int32_t cpixel, void* ptypeBuffer, int32_t pixelStride) const
-    {
-        _processLine->NewLineRequested(ptypeBuffer, cpixel, pixelStride);
-    }
-
-    static void OnLineEnd(int32_t /*cpixel*/, void* /*ptypeBuffer*/, int32_t /*pixelStride*/) noexcept
     {
     }
 

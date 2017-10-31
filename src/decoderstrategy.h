@@ -19,13 +19,6 @@ namespace charls
 class DecoderStrategy : public CodecBase
 {
 public:
-    explicit DecoderStrategy(const JlsParameters& params) :
-        CodecBase(params)
-    {
-    }
-
-    virtual ~DecoderStrategy() = default;
-
     virtual std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) = 0;
 
     virtual void DoScan() = 0;
@@ -295,6 +288,11 @@ public:
     }
 
 protected:
+    explicit DecoderStrategy(const JlsParameters& params) :
+        CodecBase(params)
+    {
+    }
+
     std::unique_ptr<ProcessLine> _processLine;
 
 private:
