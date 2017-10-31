@@ -27,6 +27,7 @@ protected:
     }
 
     JlsParameters _params;
+    JlsRect _rect{};
 };
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
@@ -43,7 +44,19 @@ public:
     virtual std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) = 0;
 
     virtual void SetPresets(const JpegLSPresetCodingParameters& presets) = 0;
-    virtual void DecodeScan(std::unique_ptr<ProcessLine> outputData, const JlsRect& size, ByteStreamInfo& compressedData) = 0;
+    virtual void DoScan() = 0;
+
+    void DecodeScan(std::unique_ptr<ProcessLine> processLine, const JlsRect& rect, ByteStreamInfo& compressedData)
+    {
+        _processLine = std::move(processLine);
+
+        uint8_t* compressedBytes = const_cast<uint8_t*>(static_cast<const uint8_t*>(compressedData.rawData));
+        _rect = rect;
+
+        Init(compressedData);
+        DoScan();
+        SkipBytes(compressedData, GetCurBytePos() - compressedBytes);
+    }
 
     void Init(ByteStreamInfo& compressedStream)
     {

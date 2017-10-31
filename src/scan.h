@@ -118,7 +118,6 @@ public:
     JlsCodec(const Traits& inTraits, const JlsParameters& params) :
         Strategy(params),
         traits(inTraits),
-        _rect(),
         _width(params.width),
         T1(0),
         T2(0),
@@ -206,7 +205,6 @@ public:
 protected:
     // codec parameters
     Traits traits;
-    JlsRect _rect;
     int _width;
     int32_t T1;
     int32_t T2;
@@ -697,9 +695,9 @@ void JlsCodec<Traits, Strategy>::DoScan()
             _currentLine += pixelstride;
         }
 
-        if (_rect.Y <= line && line < _rect.Y + _rect.Height)
+        if (Strategy::_rect.Y <= line && line < Strategy::_rect.Y + Strategy::_rect.Height)
         {
-            Strategy::OnLineEnd(_rect.Width, _currentLine + _rect.X - (components * pixelstride), pixelstride);
+            Strategy::OnLineEnd(Strategy::_rect.Width, _currentLine + Strategy::_rect.X - (components * pixelstride), pixelstride);
         }
     }
 

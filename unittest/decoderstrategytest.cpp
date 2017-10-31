@@ -22,16 +22,11 @@ public:
         Init(stream);
     }
 
-    virtual ~DecoderStrategyTester() {}
     void SetPresets(const JpegLSPresetCodingParameters& /*presets*/) override {}
 
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo /*rawStreamInfo*/) override
     {
         return nullptr;
-    }
-
-    void DecodeScan(std::unique_ptr<ProcessLine> /*outputData*/, const JlsRect& /*size*/, ByteStreamInfo& /*compressedData*/) override
-    {
     }
 
     int32_t Read(int32_t length) { return ReadLongValue(length); }
