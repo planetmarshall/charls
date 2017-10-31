@@ -7,12 +7,10 @@
 
 #include "jpegsegment.h"
 #include "jpegstreamwriter.h"
+#include "jpegmarkercode.h"
 #include <vector>
 #include <cstdint>
 #include <memory>
-
-
-enum class JpegMarkerCode : uint8_t;
 
 
 class JpegMarkerSegment : public JpegSegment
@@ -62,7 +60,7 @@ public:
 
     void Serialize(JpegStreamWriter& streamWriter) override
     {
-        streamWriter.WriteByte(0xFF);
+        streamWriter.WriteByte(static_cast<uint8_t>(JpegMarkerCode::Start));
         streamWriter.WriteByte(static_cast<uint8_t>(_markerCode));
         streamWriter.WriteWord(static_cast<uint16_t>(_content.size() + 2));
         streamWriter.WriteBytes(_content);

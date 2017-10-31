@@ -9,6 +9,7 @@
 #include "util.h"
 #include "processline.h"
 #include <memory>
+#include "jpegmarkercode.h"
 
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
 class DecoderStrategy
@@ -97,11 +98,11 @@ public:
 
     void EndScan()
     {
-        if ((*_position) != 0xFF)
+        if (*_position != static_cast<uint8_t>(JpegMarkerCode::Start))
         {
             ReadBit();
 
-            if ((*_position) != 0xFF)
+            if (*_position != static_cast<uint8_t>(JpegMarkerCode::Start))
                 throw charls_error(charls::ApiResult::TooMuchCompressedData);
         }
 
@@ -145,7 +146,7 @@ public:
 
             const bufType valnew = _position[0];
 
-            if (valnew == 0xFF)
+            if (valnew == static_cast<bufType>(JpegMarkerCode::Start))
             {
                 // JPEG bit stream rule: no FF may be followed by 0x80 or higher
                 if (_position == _endPosition - 1 || (_position[1] & 0x80) != 0)
@@ -161,7 +162,7 @@ public:
             _position += 1;
             _validBits += 8;
 
-            if (valnew == 0xFF)
+            if (valnew == static_cast<bufType>(JpegMarkerCode::Start))
             {
                 _validBits--;
             }
@@ -177,7 +178,7 @@ public:
 
         while (positionNextFF < _endPosition)
         {
-            if (*positionNextFF == 0xFF)
+            if (*positionNextFF == static_cast<uint8_t>(JpegMarkerCode::Start))
                 break;
 
             positionNextFF++;
@@ -193,7 +194,7 @@ public:
 
         for (;;)
         {
-            const int32_t cbitLast = compressedBytes[-1] == 0xFF ? 7 : 8;
+            const int32_t cbitLast = compressedBytes[-1] == static_cast<uint8_t>(JpegMarkerCode::Start) ? 7 : 8;
 
             if (validBits < cbitLast)
                 return compressedBytes;

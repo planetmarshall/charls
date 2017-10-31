@@ -137,7 +137,7 @@ void JpegStreamReader::ReadNBytes(std::vector<char>& dst, int byteCount)
 {
     for (int i = 0; i < byteCount; ++i)
     {
-        dst.push_back(static_cast<char>(ReadByte()));
+        dst.push_back(static_cast<char>(ReadUint8()));
     }
 }
 
@@ -153,7 +153,7 @@ void JpegStreamReader::ReadHeader()
         if (marker == JpegMarkerCode::StartOfScan)
             return;
 
-        const int32_t cbyteMarker = ReadWord();
+        const int32_t cbyteMarker = ReadUint16();
         const int bytesRead = ReadMarker(marker) + 2;
 
         const int paddingToRead = cbyteMarker - bytesRead;
@@ -162,7 +162,7 @@ void JpegStreamReader::ReadHeader()
 
         for (int i = 0; i < paddingToRead; ++i)
         {
-            ReadByte();
+            ReadUint8();
         }
     }
 }
@@ -170,23 +170,23 @@ void JpegStreamReader::ReadHeader()
 
 JpegMarkerCode JpegStreamReader::ReadNextMarker()
 {
-    auto byte = ReadByte();
-    if (byte != 0xFF)
+    auto code = static_cast<JpegMarkerCode>(ReadUint8());
+    if (code != JpegMarkerCode::Start)
     {
         std::ostringstream message;
         message << std::setfill('0');
         message << "Expected JPEG Marker start byte 0xFF but the byte value was 0x" << std::hex << std::uppercase
-                << std::setw(2) << static_cast<unsigned int>(byte);
+                << std::setw(2) << static_cast<unsigned int>(code);
         throw charls_error(ApiResult::MissingJpegMarkerStart, message.str());
     }
 
     // Read all preceding 0xFF fill values until a non 0xFF value has been found. (see T.81, B.1.1.2)
     do
     {
-        byte = ReadByte();
-    } while (byte == 0xFF);
+        code = static_cast<JpegMarkerCode>(ReadUint8());
+    } while (code == JpegMarkerCode::Start);
 
-    return static_cast<JpegMarkerCode>(byte);
+    return static_cast<JpegMarkerCode>(code);
 }
 
 
@@ -244,17 +244,17 @@ int JpegStreamReader::ReadMarker(JpegMarkerCode marker)
 
 int JpegStreamReader::ReadPresetParameters()
 {
-    const int type = ReadByte();
+    const int type = ReadUint8();
 
     switch (type)
     {
     case 1:
         {
-            _params.custom.MaximumSampleValue = ReadWord();
-            _params.custom.Threshold1 = ReadWord();
-            _params.custom.Threshold2 = ReadWord();
-            _params.custom.Threshold3 = ReadWord();
-            _params.custom.ResetValue = ReadWord();
+            _params.custom.MaximumSampleValue = ReadUint16();
+            _params.custom.Threshold1 = ReadUint16();
+            _params.custom.Threshold2 = ReadUint16();
+            _params.custom.Threshold3 = ReadUint16();
+            _params.custom.ResetValue = ReadUint16();
             return 11;
         }
     }
@@ -267,28 +267,28 @@ void JpegStreamReader::ReadStartOfScan(bool firstComponent)
 {
     if (!firstComponent)
     {
-        if (ReadByte() != 0xFF)
+        if (ReadUint8() != 0xFF)
             throw charls_error(ApiResult::MissingJpegMarkerStart);
-        if (static_cast<JpegMarkerCode>(ReadByte()) != JpegMarkerCode::StartOfScan)
+        if (static_cast<JpegMarkerCode>(ReadUint8()) != JpegMarkerCode::StartOfScan)
             throw charls_error(ApiResult::InvalidCompressedData);// TODO: throw more specific error code.
     }
-    int length = ReadByte();
-    length = length * 256 + ReadByte(); // TODO: do something with 'length' or remove it.
+    int length = ReadUint8();
+    length = length * 256 + ReadUint8(); // TODO: do something with 'length' or remove it.
 
-    const int componentCount = ReadByte();
+    const int componentCount = ReadUint8();
     if (componentCount != 1 && componentCount != _params.components)
         throw charls_error(ApiResult::ParameterValueNotSupported);
 
     for (int i = 0; i < componentCount; ++i)
     {
-        ReadByte();
-        ReadByte();
+        ReadUint8();
+        ReadUint8();
     }
-    _params.allowedLossyError = ReadByte();
-    _params.interleaveMode = static_cast<InterleaveMode>(ReadByte());
+    _params.allowedLossyError = ReadUint8();
+    _params.interleaveMode = static_cast<InterleaveMode>(ReadUint8());
     if (!(_params.interleaveMode == InterleaveMode::None || _params.interleaveMode == InterleaveMode::Line || _params.interleaveMode == InterleaveMode::Sample))
         throw charls_error(ApiResult::InvalidCompressedData);// TODO: throw more specific error code.
-    if (ReadByte() != 0)
+    if (ReadUint8() != 0)
         throw charls_error(ApiResult::InvalidCompressedData);// TODO: throw more specific error code.
 
     if(_params.stride == 0)
@@ -310,19 +310,19 @@ void JpegStreamReader::ReadJfif()
 {
     for(int i = 0; i < static_cast<int>(sizeof(jfifID)); i++)
     {
-        if(jfifID[i] != ReadByte())
+        if(jfifID[i] != ReadUint8())
             return;
     }
-    _params.jfif.version   = ReadWord();
+    _params.jfif.version   = ReadUint16();
 
     // DPI or DPcm
-    _params.jfif.units = ReadByte();
-    _params.jfif.Xdensity = ReadWord();
-    _params.jfif.Ydensity = ReadWord();
+    _params.jfif.units = ReadUint8();
+    _params.jfif.Xdensity = ReadUint16();
+    _params.jfif.Ydensity = ReadUint16();
 
     // thumbnail
-    _params.jfif.Xthumbnail = ReadByte();
-    _params.jfif.Ythumbnail = ReadByte();
+    _params.jfif.Xthumbnail = ReadUint8();
+    _params.jfif.Ythumbnail = ReadUint8();
     if(_params.jfif.Xthumbnail > 0 && _params.jfif.thumbnail)
     {
         std::vector<char> tempbuff(static_cast<char*>(_params.jfif.thumbnail),
@@ -334,15 +334,15 @@ void JpegStreamReader::ReadJfif()
 
 int JpegStreamReader::ReadStartOfFrame()
 {
-    _params.bitsPerSample = ReadByte();
-    _params.height = ReadWord();
-    _params.width = ReadWord();
-    _params.components= ReadByte();
+    _params.bitsPerSample = ReadUint8();
+    _params.height = ReadUint16();
+    _params.width = ReadUint16();
+    _params.components= ReadUint8();
     return 6;
 }
 
 
-uint8_t JpegStreamReader::ReadByte()
+uint8_t JpegStreamReader::ReadUint8()
 {
     if (_byteStream.rawStream)
         return static_cast<uint8_t>(_byteStream.rawStream->sbumpc());
@@ -356,10 +356,10 @@ uint8_t JpegStreamReader::ReadByte()
 }
 
 
-int JpegStreamReader::ReadWord()
+int JpegStreamReader::ReadUint16()
 {
-    const int i = ReadByte() * 256;
-    return i + ReadByte();
+    const int i = ReadUint8() * 256;
+    return i + ReadUint8();
 }
 
 
@@ -377,7 +377,7 @@ int JpegStreamReader::ReadColorXForm()
     if (strncmp(sourceTag.data(), "mrfx", 4) != 0)
         return 4;
 
-    const auto xform = ReadByte();
+    const auto xform = ReadUint8();
     switch (xform)
     {
         case static_cast<uint8_t>(ColorTransformation::None):

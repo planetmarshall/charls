@@ -7,10 +7,9 @@
 
 #include "util.h"
 #include "jpegsegment.h"
+#include "jpegmarkercode.h"
 #include <vector>
 #include <memory>
-
-enum class JpegMarkerCode : uint8_t;
 
 
 //
@@ -90,7 +89,7 @@ private:
 
     void WriteMarker(JpegMarkerCode marker)
     {
-        WriteByte(0xFF);
+        WriteByte(static_cast<uint8_t>(JpegMarkerCode::Start));
         WriteByte(static_cast<uint8_t>(marker));
     }
 

@@ -36,5 +36,7 @@ enum class JpegMarkerCode : uint8_t
     ApplicationData0 = 0xE0,                    // APP0: Application data 0: used for JFIF header.
     ApplicationData7 = 0xE7,                    // APP7: Application data 7: color-space.
     ApplicationData8 = 0xE8,                    // APP8: Application data 8: colorXForm.
-    Comment = 0xFE                              // COM:  Comment block.
+    Comment = 0xFE,                             // COM:  Comment block.
+
+    Start = 0xFF
 };

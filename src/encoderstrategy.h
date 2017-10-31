@@ -160,7 +160,7 @@ protected:
                 _freeBitCount += 8;
             }
 
-            _isFFWritten = *_position == 0xFF;
+            _isFFWritten = *_position == static_cast<uint8_t>(JpegMarkerCode::Start);
             _position++;
             _compressedLength--;
             _bytesWritten++;

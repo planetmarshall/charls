@@ -49,14 +49,14 @@ public:
     }
 
     void ReadStartOfScan(bool firstComponent);
-    uint8_t ReadByte();
+    uint8_t ReadUint8();
 
 private:
     JpegMarkerCode ReadNextMarker();
     int ReadPresetParameters();
     int ReadComment() const noexcept;
     int ReadStartOfFrame();
-    int ReadWord();
+    int ReadUint16();
     void ReadNBytes(std::vector<char>& dst, int byteCount);
     int ReadMarker(JpegMarkerCode marker);
 
