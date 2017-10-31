@@ -17,14 +17,11 @@
 
 using namespace charls;
 
-extern template class JlsCodecFactory<EncoderStrategy>;
-extern template class JlsCodecFactory<DecoderStrategy>;
-
-namespace {
-
+namespace
+{
 
 // JFIF\0
-const uint8_t jfifID[] = { 'J', 'F', 'I', 'F', '\0' };
+const uint8_t jfifID[] = {'J', 'F', 'I', 'F', '\0'};
 
 
 /// <summary>Clamping function as defined by ISO/IEC 14495-1, Figure C.3</summary>

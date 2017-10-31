@@ -36,6 +36,7 @@
 
       <!-- Explicit disable non conforming MSVC compiler options that are not compatible with the C++ standard -->
       <AdditionalOptions>/permissive- %(AdditionalOptions)</AdditionalOptions>
+      <ConformanceMode>true</ConformanceMode>      
     </ClCompile>
   </ItemDefinitionGroup>
 

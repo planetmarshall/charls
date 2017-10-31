@@ -10,6 +10,8 @@
 #include "context.h"
 #include "colortransform.h"
 #include "processline.h"
+#include "encoderstrategy.h"
+#include "publictypes.h"
 #include <sstream>
 
 // This file contains the code for handling a "scan". Usually an image is encoded as a single scan.
@@ -25,6 +27,13 @@ extern std::vector<signed char> rgquant8Ll;
 extern std::vector<signed char> rgquant10Ll;
 extern std::vector<signed char> rgquant12Ll;
 extern std::vector<signed char> rgquant16Ll;
+
+namespace charls
+{
+
+// used to determine how large runs should be encoded at a time.
+const int J[32] = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
 
 constexpr int32_t ApplySign(int32_t i, int32_t sign)
 {
@@ -799,4 +808,5 @@ void JlsCodec<Traits, Strategy>::InitParams(int32_t t1, int32_t t2, int32_t t3, 
     _RUNindex = 0;
 }
 
+}
 #endif
