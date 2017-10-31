@@ -16,7 +16,7 @@ using namespace charls;
 namespace
 {
 
-bool IsDefault(const JpegLSPresetCodingParameters& custom)
+bool IsDefault(const JpegLSPresetCodingParameters& custom) noexcept
 {
     if (custom.MaximumSampleValue != 0)
         return false;

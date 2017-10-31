@@ -80,13 +80,13 @@ public:
         _endPosition += readbytes;
     }
 
-    FORCE_INLINE void Skip(int32_t length)
+    FORCE_INLINE void Skip(int32_t length) noexcept
     {
         _validBits -= length;
         _readCache = _readCache << length;
     }
 
-    static void OnLineBegin(int32_t /*cpixel*/, void* /*ptypeBuffer*/, int32_t /*pixelStride*/)
+    static void OnLineBegin(int32_t /*cpixel*/, void* /*ptypeBuffer*/, int32_t /*pixelStride*/) noexcept
     {
     }
 
@@ -109,7 +109,7 @@ public:
             throw charls_error(charls::ApiResult::TooMuchCompressedData);
     }
 
-    FORCE_INLINE bool OptimizedRead()
+    FORCE_INLINE bool OptimizedRead() noexcept
     {
         // Easy & fast: if there is no 0xFF byte in sight, we can read without bit stuffing
         if (_position < _nextFFPosition - (sizeof(bufType)-1))
@@ -171,7 +171,7 @@ public:
         _nextFFPosition = FindNextFF();
     }
 
-    uint8_t* FindNextFF() const
+    uint8_t* FindNextFF() const noexcept
     {
         auto positionNextFF = _position;
 
@@ -186,7 +186,7 @@ public:
         return positionNextFF;
     }
 
-    uint8_t* GetCurBytePos() const
+    uint8_t* GetCurBytePos() const noexcept
     {
         int32_t validBits = _validBits;
         uint8_t* compressedBytes = _position;

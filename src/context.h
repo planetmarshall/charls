@@ -2,43 +2,28 @@
 // (C) Jan de Vaan 2007-2010, all rights reserved. See the accompanying "License.txt" for licensed use.
 //
 
-
 #ifndef CHARLS_CONTEXT
 #define CHARLS_CONTEXT
 
-
 #include <cstdint>
 
-
-//
-// Purpose: a JPEG-LS context with it's current statistics.
-//
-struct JlsContext
+/// <summary>JPEG-LS context with it's current statistics.</summary>
+class JlsContext
 {
-    int32_t A;
-    int32_t B;
-    int16_t C;
-    int16_t N;
+public:
+    int32_t A{};
+    int32_t B{};
+    int16_t C{};
+    int16_t N{1};
+    
+    JlsContext() = default;
 
-    JlsContext() :
-        A(),
-        B(),
-        C(),
-        N(1)
+    explicit JlsContext(int32_t a) noexcept :
+        A(a)
     {
     }
 
-
-    explicit JlsContext(int32_t a) :
-        A(a),
-        B(0),
-        C(0),
-        N(1)
-    {
-    }
-
-
-    FORCE_INLINE int32_t GetErrorCorrection(int32_t k) const
+    FORCE_INLINE int32_t GetErrorCorrection(int32_t k) const noexcept
     {
         if (k != 0)
             return 0;
@@ -46,8 +31,7 @@ struct JlsContext
         return BitWiseSign(2 * B + N - 1);
     }
 
-
-    FORCE_INLINE void UpdateVariables(int32_t errorValue, int32_t NEAR, int32_t NRESET)
+    FORCE_INLINE void UpdateVariables(int32_t errorValue, int32_t NEAR, int32_t NRESET) noexcept
     {
         ASSERT(N != 0);
 
@@ -93,8 +77,7 @@ struct JlsContext
         ASSERT(N != 0);
     }
 
-
-    FORCE_INLINE int32_t GetGolomb() const
+    FORCE_INLINE int32_t GetGolomb() const noexcept
     {
         const int32_t Ntest = N;
         const int32_t Atest = A;

@@ -42,7 +42,7 @@ inline void push_back(std::vector<uint8_t>& values, uint16_t value)
 }
 
 
-inline int32_t log_2(int32_t n)
+constexpr int32_t log_2(int32_t n) noexcept
 {
     int32_t x = 0;
     while (n > (int32_t(1) << x))
@@ -53,13 +53,13 @@ inline int32_t log_2(int32_t n)
 }
 
 
-inline int32_t Sign(int32_t n)
+constexpr int32_t Sign(int32_t n) noexcept
 {
     return (n >> (int32_t_bit_count - 1)) | 1;
 }
 
 
-inline int32_t BitWiseSign(int32_t i)
+constexpr int32_t BitWiseSign(int32_t i) noexcept
 {
     return i >> (int32_t_bit_count - 1);
 }
@@ -74,7 +74,7 @@ struct Triplet
         v3(0)
     {}
 
-    Triplet(int32_t x1, int32_t x2, int32_t x3) :
+    Triplet(int32_t x1, int32_t x2, int32_t x3) noexcept :
         v1(static_cast<T>(x1)),
         v2(static_cast<T>(x2)),
         v3(static_cast<T>(x3))
@@ -98,13 +98,13 @@ struct Triplet
 };
 
 
-inline bool operator==(const Triplet<uint8_t>& lhs, const Triplet<uint8_t>& rhs)
+inline bool operator==(const Triplet<uint8_t>& lhs, const Triplet<uint8_t>& rhs) noexcept
 {
     return lhs.v1 == rhs.v1 && lhs.v2 == rhs.v2 && lhs.v3 == rhs.v3;
 }
 
 
-inline bool operator!=(const Triplet<uint8_t>& lhs, const Triplet<uint8_t>& rhs)
+inline bool operator!=(const Triplet<uint8_t>& lhs, const Triplet<uint8_t>& rhs) noexcept
 {
     return !(lhs == rhs);
 }
@@ -117,7 +117,7 @@ struct Quad : Triplet<sample>
         v4(0)
         {}
 
-    Quad(Triplet<sample> triplet, int32_t alpha) : Triplet<sample>(triplet), A(static_cast<sample>(alpha))
+    Quad(Triplet<sample> triplet, int32_t alpha) noexcept : Triplet<sample>(triplet), A(static_cast<sample>(alpha))
         {}
 
     union
@@ -137,7 +137,7 @@ struct FromBigEndian
 template<>
 struct FromBigEndian<4>
 {
-    FORCE_INLINE static unsigned int Read(const uint8_t* pbyte)
+    FORCE_INLINE static unsigned int Read(const uint8_t* pbyte) noexcept
     {
         return (pbyte[0] << 24) + (pbyte[1] << 16) + (pbyte[2] << 8) + (pbyte[3] << 0);
     }
@@ -147,7 +147,7 @@ struct FromBigEndian<4>
 template<>
 struct FromBigEndian<8>
 {
-    FORCE_INLINE static uint64_t Read(const uint8_t* pbyte)
+    FORCE_INLINE static uint64_t Read(const uint8_t* pbyte) noexcept
     {
         return (static_cast<uint64_t>(pbyte[0]) << 56) + (static_cast<uint64_t>(pbyte[1]) << 48) +
                (static_cast<uint64_t>(pbyte[2]) << 40) + (static_cast<uint64_t>(pbyte[3]) << 32) +
@@ -172,11 +172,11 @@ public:
     }
 
 private:
-    static const std::error_category& CharLSCategoryInstance();
+    static const std::error_category& CharLSCategoryInstance() noexcept;
 };
 
 
-inline void SkipBytes(ByteStreamInfo& streamInfo, std::size_t count)
+inline void SkipBytes(ByteStreamInfo& streamInfo, std::size_t count) noexcept
 {
     if (!streamInfo.rawData)
         return;

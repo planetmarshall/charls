@@ -32,7 +32,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       
       <!-- Explicit define that all projects are compiled according the latest offical C++ standard -->
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
 
       <!-- Explicit disable non conforming MSVC compiler options that are not compatible with the C++ standard -->
       <AdditionalOptions>/permissive- %(AdditionalOptions)</AdditionalOptions>

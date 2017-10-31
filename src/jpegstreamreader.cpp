@@ -24,11 +24,11 @@ namespace {
 
 
 // JFIF\0
-uint8_t jfifID[] = { 'J', 'F', 'I', 'F', '\0' };
+const uint8_t jfifID[] = { 'J', 'F', 'I', 'F', '\0' };
 
 
 /// <summary>Clamping function as defined by ISO/IEC 14495-1, Figure C.3</summary>
-int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue)
+int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue) noexcept
 {
     if (i > maximumSampleValue || i < j)
         return j;
@@ -37,7 +37,7 @@ int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue)
 }
 
 
-ApiResult CheckParameterCoherent(const JlsParameters& params)
+ApiResult CheckParameterCoherent(const JlsParameters& params) noexcept
 {
     if (params.bitsPerSample < 2 || params.bitsPerSample > 16)
         return ApiResult::ParameterValueNotSupported;
@@ -58,7 +58,7 @@ ApiResult CheckParameterCoherent(const JlsParameters& params)
 } // namespace
 
 
-JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError)
+JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError) noexcept
 {
     JpegLSPresetCodingParameters preset;
 
@@ -87,7 +87,7 @@ void JpegImageDataSegment::Serialize(JpegStreamWriter& streamWriter)
 }
 
 
-JpegStreamReader::JpegStreamReader(ByteStreamInfo byteStreamInfo) :
+JpegStreamReader::JpegStreamReader(ByteStreamInfo byteStreamInfo) noexcept :
     _byteStream(byteStreamInfo),
     _params(),
     _rect()
@@ -300,7 +300,7 @@ void JpegStreamReader::ReadStartOfScan(bool firstComponent)
 }
 
 
-int JpegStreamReader::ReadComment() const
+int JpegStreamReader::ReadComment() const noexcept
 {
     return 0;
 }
@@ -363,7 +363,7 @@ int JpegStreamReader::ReadWord()
 }
 
 
-int JpegStreamReader::ReadColorSpace() const
+int JpegStreamReader::ReadColorSpace() const noexcept
 {
     return 0;
 }

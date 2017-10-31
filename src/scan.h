@@ -20,13 +20,13 @@
 #endif
 
 
-extern CTable decodingTables[16];
+extern const GolombCodeTable decodingTables[16];
 extern std::vector<signed char> rgquant8Ll;
 extern std::vector<signed char> rgquant10Ll;
 extern std::vector<signed char> rgquant12Ll;
 extern std::vector<signed char> rgquant16Ll;
 
-inline int32_t ApplySign(int32_t i, int32_t sign)
+constexpr int32_t ApplySign(int32_t i, int32_t sign)
 {
     return (sign ^ i) - sign;
 }
@@ -60,7 +60,7 @@ inline int32_t GetPredictedValue(int32_t Ra, int32_t Rb, int32_t Rc)
 
 #else
 
-inline int32_t GetPredictedValue(int32_t Ra, int32_t Rb, int32_t Rc)
+inline int32_t GetPredictedValue(int32_t Ra, int32_t Rb, int32_t Rc) noexcept
 {
     // sign trick reduces the number of if statements (branches)
     const int32_t sgn = BitWiseSign(Rb - Ra);
@@ -81,19 +81,19 @@ inline int32_t GetPredictedValue(int32_t Ra, int32_t Rb, int32_t Rc)
 
 #endif
 
-inline int32_t UnMapErrVal(int32_t mappedError)
+constexpr int32_t UnMapErrVal(int32_t mappedError)
 {
     const int32_t sign = static_cast<int32_t>(mappedError << (int32_t_bit_count-1)) >> (int32_t_bit_count-1);
     return sign ^ (mappedError >> 1);
 }
 
-inline int32_t GetMappedErrVal(int32_t Errval)
+constexpr int32_t GetMappedErrVal(int32_t Errval)
 {
     const int32_t mappedError = (Errval >> (int32_t_bit_count-2)) ^ (2 * Errval);
     return mappedError;
 }
 
-inline int32_t ComputeContextID(int32_t Q1, int32_t Q2, int32_t Q3)
+constexpr int32_t ComputeContextID(int32_t Q1, int32_t Q2, int32_t Q3)
 {
     return (Q1 * 9 + Q2) * 9 + Q3;
 }
@@ -135,7 +135,7 @@ public:
                    presets.ResetValue != 0 ? presets.ResetValue : presetDefault.ResetValue);
     }
 
-    bool IsInterleaved()
+    bool IsInterleaved() noexcept
     {
         if (Info().interleaveMode == InterleaveMode::None)
             return false;
@@ -146,14 +146,14 @@ public:
         return true;
     }
 
-    JlsParameters& Info()
+    JlsParameters& Info() noexcept
     {
         return Strategy::_params;
     }
 
-    signed char QuantizeGratientOrg(int32_t Di) const;
+    signed char QuantizeGratientOrg(int32_t Di) const noexcept;
 
-    FORCE_INLINE int32_t QuantizeGratient(int32_t Di) const
+    FORCE_INLINE int32_t QuantizeGratient(int32_t Di) const noexcept
     {
         ASSERT(QuantizeGratientOrg(Di) == *(_pquant + Di));
         return *(_pquant + Di);
@@ -164,12 +164,12 @@ public:
     int32_t DecodeValue(int32_t k, int32_t limit, int32_t qbpp);
     FORCE_INLINE void EncodeMappedValue(int32_t k, int32_t mappedError, int32_t limit);
 
-    void IncrementRunIndex()
+    void IncrementRunIndex() noexcept
     {
         _RUNindex = std::min(31, _RUNindex + 1);
     }
 
-    void DecrementRunIndex()
+    void DecrementRunIndex() noexcept
     {
         _RUNindex = std::max(0, _RUNindex - 1);
     }
@@ -231,10 +231,10 @@ typename Traits::SAMPLE JlsCodec<Traits,Strategy>::DoRegular(int32_t Qs, int32_t
     const int32_t Px = traits.CorrectPrediction(pred + ApplySign(ctx.C, sign));
 
     int32_t ErrVal;
-    const Code& code = decodingTables[k].Get(Strategy::PeekByte());
-    if (code.GetLength() != 0)
+    const GolombCode& code = decodingTables[k].Get(Strategy::PeekByte());
+    if (code.GetBitCount() != 0)
     {
-        Strategy::Skip(code.GetLength());
+        Strategy::Skip(code.GetBitCount());
         ErrVal = code.GetValue();
         ASSERT(std::abs(ErrVal) < 65535);
     }
@@ -270,44 +270,6 @@ typename Traits::SAMPLE JlsCodec<Traits,Strategy>::DoRegular(int32_t Qs, int32_t
 }
 
 
-// Functions to build tables used to decode short Golomb codes.
-
-inline std::pair<int32_t, int32_t> CreateEncodedValue(int32_t k, int32_t mappedError)
-{
-    const int32_t highbits = mappedError >> k;
-    return std::make_pair(highbits + k + 1, (int32_t(1) << k) | (mappedError & ((int32_t(1) << k) - 1)));
-}
-
-
-inline CTable InitTable(int32_t k)
-{
-    CTable table;
-    for (short nerr = 0; ; nerr++)
-    {
-        // Q is not used when k != 0
-        const int32_t merrval = GetMappedErrVal(nerr);
-        std::pair<int32_t, int32_t> paircode = CreateEncodedValue(k, merrval);
-        if (paircode.first > CTable::byte_bit_count)
-            break;
-
-        Code code(nerr, static_cast<short>(paircode.first));
-        table.AddEntry(static_cast<uint8_t>(paircode.second), code);
-    }
-
-    for (short nerr = -1; ; nerr--)
-    {
-        // Q is not used when k != 0
-        const int32_t merrval = GetMappedErrVal(nerr);
-        std::pair<int32_t, int32_t> paircode = CreateEncodedValue(k, merrval);
-        if (paircode.first > CTable::byte_bit_count)
-            break;
-
-        Code code = Code(nerr, static_cast<short>(paircode.first));
-        table.AddEntry(static_cast<uint8_t>(paircode.second), code);
-    }
-
-    return table;
-}
 
 
 // Encoding/decoding of Golomb codes
@@ -413,7 +375,7 @@ void JlsCodec<Traits, Strategy>::InitQuantizationLUT()
 #endif
 
 template<typename Traits, typename Strategy>
-signed char JlsCodec<Traits,Strategy>::QuantizeGratientOrg(int32_t Di) const
+signed char JlsCodec<Traits,Strategy>::QuantizeGratientOrg(int32_t Di) const noexcept
 {
     if (Di <= -T3) return  -4;
     if (Di <= -T2) return  -3;
@@ -614,7 +576,7 @@ int32_t JlsCodec<Traits, Strategy>::DoRunMode(int32_t startIndex, DecoderStrateg
     const PIXEL Ra = _currentLine[startIndex-1];
 
     const int32_t runLength = DecodeRunPixels(Ra, _currentLine + startIndex, _width - startIndex);
-    int32_t endIndex = startIndex + runLength;
+    const int32_t endIndex = startIndex + runLength;
 
     if (endIndex == _width)
         return endIndex - startIndex;

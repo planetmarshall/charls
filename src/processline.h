@@ -25,37 +25,37 @@ class ProcessLine
 {
 public:
     virtual ~ProcessLine() = default;
-    virtual void NewLineDecoded(const void* pSrc, int pixelCount, int sourceStride) = 0;
-    virtual void NewLineRequested(void* pDest, int pixelCount, int destStride) = 0;
+    virtual void NewLineDecoded(const void* source, int pixelCount, int sourceStride) = 0;
+    virtual void NewLineRequested(void* destination, int pixelCount, int destStride) = 0;
 };
 
 
 class PostProcesSingleComponent : public ProcessLine
 {
 public:
-    PostProcesSingleComponent(void* rawData, const JlsParameters& params, size_t bytesPerPixel) :
-        _rawData(static_cast<uint8_t*>(rawData)),
-        _bytesPerPixel(bytesPerPixel),
-        _bytesPerLine(params.stride)
+    PostProcesSingleComponent(void* rawData, const JlsParameters& params, size_t bytesPerPixel) noexcept :
+        rawData_(static_cast<uint8_t*>(rawData)),
+        bytesPerPixel_(bytesPerPixel),
+        bytesPerLine_(params.stride)
     {
     }
 
-    void NewLineRequested(void* dest, int pixelCount, int /*byteStride*/) override
+    void NewLineRequested(void* dest, int pixelCount, int /*byteStride*/) noexcept override
     {
-        std::memcpy(dest, _rawData, pixelCount * _bytesPerPixel);
-        _rawData += _bytesPerLine;
+        std::memcpy(dest, rawData_, pixelCount * bytesPerPixel_);
+        rawData_ += bytesPerLine_;
     }
 
-    void NewLineDecoded(const void* pSrc, int pixelCount, int /*sourceStride*/) override
+    void NewLineDecoded(const void* source, int pixelCount, int /*sourceStride*/) override
     {
-        std::memcpy(_rawData, pSrc, pixelCount * _bytesPerPixel);
-        _rawData += _bytesPerLine;
+        std::memcpy(rawData_, source, pixelCount * bytesPerPixel_);
+        rawData_ += bytesPerLine_;
     }
 
 private:
-    uint8_t* _rawData;
-    size_t _bytesPerPixel;
-    size_t _bytesPerLine;
+    uint8_t* rawData_;
+    size_t bytesPerPixel_;
+    size_t bytesPerLine_;
 };
 
 
@@ -68,7 +68,7 @@ inline void ByteSwap(unsigned char* data, int count)
         throw charls_error(charls::ApiResult::InvalidJlsParameters, message.str());
     }
 
-    auto data32 = reinterpret_cast<unsigned int*>(data);
+    const auto data32 = reinterpret_cast<unsigned int*>(data);
     for(auto i = 0; i < count / 4; i++)
     {
         const auto value = data32[i];
@@ -84,7 +84,7 @@ inline void ByteSwap(unsigned char* data, int count)
 class PostProcesSingleStream : public ProcessLine
 {
 public:
-    PostProcesSingleStream(std::basic_streambuf<char>* rawData, const JlsParameters& params, size_t bytesPerPixel) :
+    PostProcesSingleStream(std::basic_streambuf<char>* rawData, const JlsParameters& params, size_t bytesPerPixel) noexcept :
         _rawData(rawData),
         _bytesPerPixel(bytesPerPixel),
         _bytesPerLine(params.stride)
@@ -130,21 +130,21 @@ private:
 
 
 template<typename TRANSFORM, typename T>
-void TransformLineToQuad(const T* ptypeInput, int32_t pixelStrideIn, Quad<T>* pbyteBuffer, int32_t pixelStride, TRANSFORM& transform)
+void TransformLineToQuad(const T* ptypeInput, int32_t pixelStrideIn, Quad<T>* pbyteBuffer, int32_t pixelStride, TRANSFORM& transform) noexcept
 {
     const int cpixel = std::min(pixelStride, pixelStrideIn);
     Quad<T>* ptypeBuffer = pbyteBuffer;
 
     for (auto x = 0; x < cpixel; ++x)
     {
-        Quad<T> pixel(transform(ptypeInput[x], ptypeInput[x + pixelStrideIn], ptypeInput[x + 2*pixelStrideIn]), ptypeInput[x + 3 * pixelStrideIn]);
+        const Quad<T> pixel(transform(ptypeInput[x], ptypeInput[x + pixelStrideIn], ptypeInput[x + 2*pixelStrideIn]), ptypeInput[x + 3 * pixelStrideIn]);
         ptypeBuffer[x] = pixel;
     }
 }
 
 
 template<typename TRANSFORM, typename T>
-void TransformQuadToLine(const Quad<T>* pbyteInput, int32_t pixelStrideIn, T* ptypeBuffer, int32_t pixelStride, TRANSFORM& transform)
+void TransformQuadToLine(const Quad<T>* pbyteInput, int32_t pixelStrideIn, T* ptypeBuffer, int32_t pixelStride, TRANSFORM& transform) noexcept
 {
     const auto cpixel = std::min(pixelStride, pixelStrideIn);
     const Quad<T>* ptypeBufferIn = pbyteInput;
@@ -152,7 +152,7 @@ void TransformQuadToLine(const Quad<T>* pbyteInput, int32_t pixelStrideIn, T* pt
     for (auto x = 0; x < cpixel; ++x)
     {
         const Quad<T> color = ptypeBufferIn[x];
-        Quad<T> colorTranformed(transform(color.v1, color.v2, color.v3), color.v4);
+        const Quad<T> colorTranformed(transform(color.v1, color.v2, color.v3), color.v4);
 
         ptypeBuffer[x] = colorTranformed.v1;
         ptypeBuffer[x + pixelStride] = colorTranformed.v2;
@@ -163,7 +163,7 @@ void TransformQuadToLine(const Quad<T>* pbyteInput, int32_t pixelStrideIn, T* pt
 
 
 template<typename T>
-void TransformRgbToBgr(T* pDest, int samplesPerPixel, int pixelCount)
+void TransformRgbToBgr(T* pDest, int samplesPerPixel, int pixelCount) noexcept
 {
     for (auto i = 0; i < pixelCount; ++i)
     {
@@ -174,7 +174,7 @@ void TransformRgbToBgr(T* pDest, int samplesPerPixel, int pixelCount)
 
 
 template<typename TRANSFORM, typename T>
-void TransformLine(Triplet<T>* pDest, const Triplet<T>* pSrc, int pixelCount, TRANSFORM& transform)
+void TransformLine(Triplet<T>* pDest, const Triplet<T>* pSrc, int pixelCount, TRANSFORM& transform) noexcept
 {
     for (auto i = 0; i < pixelCount; ++i)
     {
@@ -184,7 +184,7 @@ void TransformLine(Triplet<T>* pDest, const Triplet<T>* pSrc, int pixelCount, TR
 
 
 template<typename TRANSFORM, typename T>
-void TransformLineToTriplet(const T* ptypeInput, int32_t pixelStrideIn, Triplet<T>* pbyteBuffer, int32_t pixelStride, TRANSFORM& transform)
+void TransformLineToTriplet(const T* ptypeInput, int32_t pixelStrideIn, Triplet<T>* pbyteBuffer, int32_t pixelStride, TRANSFORM& transform) noexcept
 {
     const auto cpixel = std::min(pixelStride, pixelStrideIn);
     Triplet<T>* ptypeBuffer = pbyteBuffer;
@@ -197,7 +197,7 @@ void TransformLineToTriplet(const T* ptypeInput, int32_t pixelStrideIn, Triplet<
 
 
 template<typename TRANSFORM, typename T>
-void TransformTripletToLine(const Triplet<T>* pbyteInput, int32_t pixelStrideIn, T* ptypeBuffer, int32_t pixelStride, TRANSFORM& transform)
+void TransformTripletToLine(const Triplet<T>* pbyteInput, int32_t pixelStrideIn, T* ptypeBuffer, int32_t pixelStride, TRANSFORM& transform) noexcept
 {
     const auto cpixel = std::min(pixelStride, pixelStrideIn);
     const Triplet<T>* ptypeBufferIn = pbyteInput;
@@ -205,7 +205,7 @@ void TransformTripletToLine(const Triplet<T>* pbyteInput, int32_t pixelStrideIn,
     for (auto x = 0; x < cpixel; ++x)
     {
         const Triplet<T> color = ptypeBufferIn[x];
-        Triplet<T> colorTranformed = transform(color.v1, color.v2, color.v3);
+        const Triplet<T> colorTranformed = transform(color.v1, color.v2, color.v3);
 
         ptypeBuffer[x] = colorTranformed.v1;
         ptypeBuffer[x + pixelStride] = colorTranformed.v2;
@@ -258,7 +258,7 @@ public:
         Transform(_buffer.data(), dest, pixelCount, destStride);
     }
 
-    void Transform(const void* source, void* dest, int pixelCount, int destStride)
+    void Transform(const void* source, void* dest, int pixelCount, int destStride) noexcept
     {
         if (_params.outputBgr)
         {
@@ -284,7 +284,7 @@ public:
         }
     }
 
-    void DecodeTransform(const void* pSrc, void* rawData, int pixelCount, int byteStride)
+    void DecodeTransform(const void* pSrc, void* rawData, int pixelCount, int byteStride) noexcept
     {
         if (_params.components == 3)
         {

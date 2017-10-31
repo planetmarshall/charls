@@ -18,7 +18,7 @@ struct TransformNoneImpl
 
     using size_type = T;
 
-    FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const
+    FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const noexcept
     {
         return Triplet<T>(v1, v2, v3);
     }
@@ -43,11 +43,11 @@ struct TransformHp1
 
     struct Inverse
     {
-        explicit Inverse(const TransformHp1&)
+        explicit Inverse(const TransformHp1&) noexcept
         {
         }
 
-        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const
+        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const noexcept
         {
             return Triplet<T>(v1 + v2 - Range / 2, v2, v3 + v2 - Range / 2);
         }
@@ -76,7 +76,7 @@ struct TransformHp2
 
     struct Inverse
     {
-        explicit Inverse(const TransformHp2&)
+        explicit Inverse(const TransformHp2&) noexcept
         {
         }
 
@@ -90,7 +90,7 @@ struct TransformHp2
         }
     };
 
-    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const
+    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const noexcept
     {
         return Triplet<T>(red - green + Range / 2, green, blue - ((red + green) >> 1) - Range / 2);
     }
@@ -109,7 +109,7 @@ struct TransformHp3
 
     struct Inverse
     {
-        explicit Inverse(const TransformHp3&)
+        explicit Inverse(const TransformHp3&) noexcept
         {
         }
 
@@ -147,15 +147,15 @@ struct TransformShifted
 
     struct Inverse
     {
-        explicit Inverse(const TransformShifted& transform)
+        explicit Inverse(const TransformShifted& transform) noexcept
             : _shift(transform._shift),
               _inverseTransform(transform._colortransform)
         {
         }
 
-        FORCE_INLINE Triplet<size_type> operator()(int v1, int v2, int v3)
+        FORCE_INLINE Triplet<size_type> operator()(int v1, int v2, int v3) noexcept
         {
-            Triplet<size_type> result = _inverseTransform(v1 << _shift, v2 << _shift, v3 << _shift);
+            const Triplet<size_type> result = _inverseTransform(v1 << _shift, v2 << _shift, v3 << _shift);
             return Triplet<size_type>(result.R >> _shift, result.G >> _shift, result.B >> _shift);
         }
 
@@ -170,14 +170,14 @@ struct TransformShifted
         typename Transform::Inverse _inverseTransform;
     };
 
-    explicit TransformShifted(int shift)
+    explicit TransformShifted(int shift) noexcept
         : _shift(shift)
     {
     }
 
-    FORCE_INLINE Triplet<size_type> operator()(int red, int green, int blue)
+    FORCE_INLINE Triplet<size_type> operator()(int red, int green, int blue) noexcept
     {
-        Triplet<size_type> result = _colortransform(red << _shift, green << _shift, blue << _shift);
+        const Triplet<size_type> result = _colortransform(red << _shift, green << _shift, blue << _shift);
         return Triplet<size_type>(result.R >> _shift, result.G >> _shift, result.B >> _shift);
     }
 
