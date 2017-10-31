@@ -32,13 +32,13 @@ public:
             {
                 DefaultTraits<uint8_t, uint8_t> traits((1 << params.bitsPerSample) - 1, params.allowedLossyError, presets.ResetValue);
                 traits.MAXVAL = presets.MaximumSampleValue;
-                codec = std::make_unique<JlsCodec<DefaultTraits<uint8_t, uint8_t>, Strategy>>(traits, params);
+                codec = std::make_unique<JlsCodec<Strategy, DefaultTraits<uint8_t, uint8_t>>>(traits, params);
             }
             else
             {
                 DefaultTraits<uint16_t, uint16_t> traits((1 << params.bitsPerSample) - 1, params.allowedLossyError, presets.ResetValue);
                 traits.MAXVAL = presets.MaximumSampleValue;
-                codec = std::make_unique<JlsCodec<DefaultTraits<uint16_t, uint16_t>, Strategy>>(traits, params);
+                codec = std::make_unique<JlsCodec<Strategy, DefaultTraits<uint16_t, uint16_t>>>(traits, params);
             }
         }
 
@@ -103,7 +103,7 @@ private:
     template<typename Traits>
     std::unique_ptr<Strategy> create_codec(const Traits& traits, const JlsParameters& params)
     {
-        return std::make_unique<JlsCodec<Traits, Strategy>>(traits, params);
+        return std::make_unique<JlsCodec<Strategy, Traits>>(traits, params);
     }
 };
 
