@@ -372,8 +372,8 @@ void JlsCodec<Strategy, Traits>::InitQuantizationLUT()
 #pragma warning(pop)
 #endif
 
-template<typename Traits, typename Strategy>
-signed char JlsCodec<Traits,Strategy>::QuantizeGratientOrg(int32_t Di) const noexcept
+template<typename Strategy, typename Traits>
+signed char JlsCodec<Strategy, Traits>::QuantizeGratientOrg(int32_t Di) const noexcept
 {
     if (Di <= -T3) return  -4;
     if (Di <= -T2) return  -3;
@@ -390,8 +390,8 @@ signed char JlsCodec<Traits,Strategy>::QuantizeGratientOrg(int32_t Di) const noe
 
 // RI = Run interruption: functions that handle the sample terminating a run.
 
-template<typename Traits, typename Strategy>
-int32_t JlsCodec<Traits,Strategy>::DecodeRIError(CContextRunMode& ctx)
+template<typename Strategy, typename Traits>
+int32_t JlsCodec<Strategy, Traits>::DecodeRIError(CContextRunMode& ctx)
 {
     const int32_t k = ctx.GetGolomb();
     const int32_t EMErrval = DecodeValue(k, traits.LIMIT - J[_RUNindex]-1, traits.qbpp);
@@ -401,8 +401,8 @@ int32_t JlsCodec<Traits,Strategy>::DecodeRIError(CContextRunMode& ctx)
 }
 
 
-template<typename Traits, typename Strategy>
-void JlsCodec<Traits,Strategy>::EncodeRIError(CContextRunMode& ctx, int32_t Errval)
+template<typename Strategy, typename Traits>
+void JlsCodec<Strategy, Traits>::EncodeRIError(CContextRunMode& ctx, int32_t Errval)
 {
     const int32_t k = ctx.GetGolomb();
     const bool map = ctx.ComputeMap(Errval, k);
@@ -537,8 +537,8 @@ int32_t JlsCodec<Strategy, Traits>::DecodeRunPixels(PIXEL Ra, PIXEL* startPos, i
     return index;
 }
 
-template<typename Traits, typename Strategy>
-int32_t JlsCodec<Traits, Strategy>::DoRunMode(int32_t index, EncoderStrategy*)
+template<typename Strategy, typename Traits>
+int32_t JlsCodec<Strategy, Traits>::DoRunMode(int32_t index, EncoderStrategy*)
 {
     const int32_t ctypeRem = _width - index;
     PIXEL* ptypeCurX = _currentLine + index;
@@ -762,13 +762,13 @@ size_t JlsCodec<Strategy, Traits>::EncodeScan(std::unique_ptr<ProcessLine> proce
 
 
 // Setup codec for decoding and calls DoScan
-template<typename Traits, typename Strategy>
-void JlsCodec<Traits, Strategy>::DecodeScan(std::unique_ptr<ProcessLine> processLine, const JlsRect& rect, ByteStreamInfo& compressedData)
+template<typename Strategy, typename Traits>
+void JlsCodec<Strategy, Traits>::DecodeScan(std::unique_ptr<ProcessLine> processLine, const JlsRect& rect, ByteStreamInfo& compressedData)
 {
     Strategy::_processLine = std::move(processLine);
 
     uint8_t* compressedBytes = const_cast<uint8_t*>(static_cast<const uint8_t*>(compressedData.rawData));
-    _rect = rect;
+    Strategy::_rect = rect;
 
     Strategy::Init(compressedData);
     DoScan();
@@ -777,8 +777,8 @@ void JlsCodec<Traits, Strategy>::DecodeScan(std::unique_ptr<ProcessLine> process
 
 
 // Initialize the codec data structures. Depends on JPEG-LS parameters like Threshold1-Threshold3.
-template<typename Traits, typename Strategy>
-void JlsCodec<Traits, Strategy>::InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t nReset)
+template<typename Strategy, typename Traits>
+void JlsCodec<Strategy, Traits>::InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t nReset)
 {
     T1 = t1;
     T2 = t2;
