@@ -15,9 +15,11 @@ struct LosslessTraitsImpl
 {
     using SAMPLE = sample;
 
+    static constexpr int NEAR = 0;
+    static constexpr bool LosslessOptimized{true};
+
     enum
     {
-        NEAR  = 0,
         bpp   = bitsperpixel,
         qbpp  = bitsperpixel,
         RANGE = (1 << bpp),

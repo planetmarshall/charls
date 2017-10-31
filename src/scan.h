@@ -17,12 +17,6 @@
 
 // This file contains the code for handling a "scan". Usually an image is encoded as a single scan.
 
-
-#ifdef _MSC_VER
-#pragma warning (disable: 4127) // conditional expression is constant (caused by some template methods that are not fully specialized) [VS2017]
-#endif
-
-
 extern const GolombCodeTable decodingTables[16];
 extern std::vector<signed char> rgquant8Ll;
 extern std::vector<signed char> rgquant10Ll;
@@ -185,9 +179,9 @@ public:
 
     void DoLine(SAMPLE* pdummy);
     void DoLine(Triplet<SAMPLE>* pdummy);
-    void DoScan();
+    void DoScan() override;
 
-    std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo);
+    std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) override;
     void InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t nReset);
 
 private:
@@ -272,39 +266,33 @@ FORCE_INLINE void JlsEncoder<Traits>::EncodeMappedValue(int32_t k, int32_t mappe
 }
 
 
-// Disable the Microsoft Static Analyzer warning: Potential comparison of a constant with another constant. (false warning, triggered by template construction)
-#ifdef _PREFAST_
-#pragma warning(push)
-#pragma warning(disable:6326)
-#endif
-
 // Sets up a lookup table to "Quantize" sample difference.
 
 template<typename Traits>
 void JlsEncoder<Traits>::InitQuantizationLUT()
 {
     // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
-    if (traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
+    if constexpr (traits.LosslessOptimized && traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
     {
-        const JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
+        constexpr JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
         if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
         {
-            if (traits.bpp == 8)
+            if constexpr (traits.bpp == 8)
             {
                 _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 10)
+            if constexpr (traits.bpp == 10)
             {
                 _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 12)
+            if constexpr (traits.bpp == 12)
             {
                 _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 16)
+            if constexpr (traits.bpp == 16)
             {
                 _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
                 return;
@@ -322,10 +310,6 @@ void JlsEncoder<Traits>::InitQuantizationLUT()
         _pquant[i] = QuantizeGratientOrg(i);
     }
 }
-
-#ifdef _PREFAST_
-#pragma warning(pop)
-#endif
 
 template<typename Traits>
 void JlsEncoder<Traits>::EncodeRIError(CContextRunMode& ctx, int32_t Errval)
@@ -761,39 +745,33 @@ int32_t JlsDecoder<Traits>::DecodeValue(int32_t k, int32_t limit, int32_t qbpp)
 }
 
 
-// Disable the Microsoft Static Analyzer warning: Potential comparison of a constant with another constant. (false warning, triggered by template construction)
-#ifdef _PREFAST_
-#pragma warning(push)
-#pragma warning(disable:6326)
-#endif
-
 // Sets up a lookup table to "Quantize" sample difference.
 
 template<typename Traits>
 void JlsDecoder<Traits>::InitQuantizationLUT()
 {
     // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
-    if (traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
+    if constexpr (traits.LosslessOptimized && traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
     {
-        const JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
+        constexpr JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
         if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
         {
-            if (traits.bpp == 8)
+            if constexpr (traits.bpp == 8)
             {
                 _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 10)
+            if constexpr (traits.bpp == 10)
             {
                 _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 12)
+            if constexpr (traits.bpp == 12)
             {
                 _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
                 return;
             }
-            if (traits.bpp == 16)
+            if constexpr (traits.bpp == 16)
             {
                 _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
                 return;
@@ -812,9 +790,6 @@ void JlsDecoder<Traits>::InitQuantizationLUT()
     }
 }
 
-#ifdef _PREFAST_
-#pragma warning(pop)
-#endif
 
 template<typename Traits>
 signed char JlsDecoder<Traits>::QuantizeGratientOrg(int32_t Di) const noexcept

@@ -26,6 +26,8 @@ struct DefaultTraits
     using SAMPLE = sample;
     using PIXEL = pixel;
 
+    static constexpr bool LosslessOptimized{false};
+
     int32_t MAXVAL;
     const int32_t RANGE;
     const int32_t NEAR;

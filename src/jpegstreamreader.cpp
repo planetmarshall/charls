@@ -25,7 +25,7 @@ const uint8_t jfifID[] = {'J', 'F', 'I', 'F', '\0'};
 
 
 /// <summary>Clamping function as defined by ISO/IEC 14495-1, Figure C.3</summary>
-int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue) noexcept
+constexpr int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue) noexcept
 {
     if (i > maximumSampleValue || i < j)
         return j;
@@ -55,20 +55,14 @@ ApiResult CheckParameterCoherent(const JlsParameters& params) noexcept
 } // namespace
 
 
-JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError) noexcept
+constexpr JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError) noexcept
 {
-    JpegLSPresetCodingParameters preset;
-
     const int32_t factor = (std::min(maximumSampleValue, 4095) + 128) / 256;
     const int threshold1 = clamp(factor * (DefaultThreshold1 - 2) + 2 + 3 * allowedLossyError, allowedLossyError + 1, maximumSampleValue);
     const int threshold2 = clamp(factor * (DefaultThreshold2 - 3) + 3 + 5 * allowedLossyError, threshold1, maximumSampleValue); //-V537
+    const int threshold3 = clamp(factor * (DefaultThreshold3 - 4) + 4 + 7 * allowedLossyError, threshold2, maximumSampleValue);
 
-    preset.Threshold1 = threshold1;
-    preset.Threshold2 = threshold2;
-    preset.Threshold3 = clamp(factor * (DefaultThreshold3 - 4) + 4 + 7 * allowedLossyError, threshold2, maximumSampleValue);
-    preset.MaximumSampleValue = maximumSampleValue;
-    preset.ResetValue = DefaultResetValue;
-    return preset;
+    return {maximumSampleValue, threshold1, threshold2, threshold3, DefaultResetValue};
 }
 
 

@@ -14,7 +14,7 @@ struct JlsParameters;
 class JpegCustomParameters;
 
 
-JpegLSPresetCodingParameters ComputeDefault(int32_t MAXVAL, int32_t NEAR) noexcept;
+constexpr JpegLSPresetCodingParameters ComputeDefault(int32_t MAXVAL, int32_t NEAR) noexcept;
 
 
 //
