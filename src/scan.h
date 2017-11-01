@@ -157,7 +157,6 @@ public:
 
     void InitQuantizationLUT();
 
-    int32_t DecodeValue(int32_t k, int32_t limit, int32_t qbpp);
     FORCE_INLINE void EncodeMappedValue(int32_t k, int32_t mappedError, int32_t limit);
 
     void IncrementRunIndex() noexcept
@@ -218,21 +217,6 @@ typename Traits::SAMPLE JlsEncoder<Traits>::DoRegular(int32_t Qs, int32_t x, int
     ctx.UpdateVariables(ErrVal, traits.NEAR, traits.RESET);
     ASSERT(traits.IsNear(traits.ComputeReconstructedSample(Px, ApplySign(ErrVal, sign)), x));
     return static_cast<SAMPLE>(traits.ComputeReconstructedSample(Px, ApplySign(ErrVal, sign)));
-}
-
-
-template<typename Traits>
-int32_t JlsEncoder<Traits>::DecodeValue(int32_t k, int32_t limit, int32_t qbpp)
-{
-    const int32_t highbits = ReadHighbits();
-
-    if (highbits >= limit - (qbpp + 1))
-        return ReadValue(qbpp) + 1;
-
-    if (k == 0)
-        return highbits;
-
-    return (highbits << k) + ReadValue(k);
 }
 
 
@@ -671,9 +655,9 @@ public:
 
     void DoLine(SAMPLE* pdummy);
     void DoLine(Triplet<SAMPLE>* pdummy);
-    void DoScan();
+    void DoScan() override;
 
-    std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo);
+    std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo rawStreamInfo) override;
     void InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t nReset);
 
 private:

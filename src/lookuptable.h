@@ -43,7 +43,7 @@ public:
     constexpr void AddEntry(uint8_t bvalue, GolombCode code)
     {
         const int32_t bit_count = code.GetBitCount();
-        ASSERT(bit_count <= byte_bit_count);
+        ASSERT(static_cast<size_t>(bit_count) <= byte_bit_count);
 
         for (int32_t i = 0; i < 1 << (byte_bit_count - bit_count); ++i)
         {
