@@ -1,4 +1,9 @@
+sudo: false
+
 language: cpp
+
+os:
+  - linux
 
 compiler:
   - gcc
@@ -8,26 +13,15 @@ install:
 - if [ "$CXX" = "g++" ]; then export CXX="g++-7" CC="gcc-7"; fi
 - if [ "$CXX" = "clang++" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
 
-matrix:
-  include:
-  - os: linux
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - gcc-7
-          - g++-7
-
-  - os: linux
-    addons:
-      apt:
-        sources:
-          - llvm-toolchain-trusty-5.0
-        packages:
-          - clang-5.0
-
-sudo: false
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - llvm-toolchain-trusty-5.0
+    packages:
+    - gcc-7
+    - g++-7
+    - clang-5.0
 
 before_script:
   - mkdir debug
