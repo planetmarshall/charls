@@ -280,7 +280,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="charls.def" />
-    <None Include="JpegStreamWriter.cd" />
+    <None Include="JpegStream.cd" />
+    <None Include="Strategy.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="interface.cpp" />

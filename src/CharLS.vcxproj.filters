@@ -89,10 +89,13 @@
     <ResourceCompile Include="charls.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="JpegStreamWriter.cd">
+    <None Include="charls.def" />
+    <None Include="Strategy.cd">
       <Filter>Design</Filter>
     </None>
-    <None Include="charls.def" />
+    <None Include="JpegStream.cd">
+      <Filter>Design</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
