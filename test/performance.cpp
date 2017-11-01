@@ -3,7 +3,6 @@
 //
 
 #include "performance.h"
-#include "config.h"
 #include "util.h"
 #include "../src/charls.h"
 
@@ -40,8 +39,8 @@ void TestPerformance(int loopCount)
     // RGBA image (This is a common PNG sample)
     TestFile("test/alphatest.raw", 0, Size(380, 287), 8, 4, false, loopCount);
 
-    Size size1024 = Size(1024, 1024);
-    Size size512 = Size(512, 512);
+    const Size size1024 = Size(1024, 1024);
+    const Size size512 = Size(512, 512);
 
     // 16 bit mono
     TestFile("test/MR2_UNC", 1728, size1024, 16, 1, true, loopCount);
@@ -123,19 +122,22 @@ void DecodePerformanceTests(int loopCount)
     if (result != charls::ApiResult::OK)
         return;
 
-    std::vector<uint8_t> uncompressed(params.height * params.width * 2);
+    std::vector<uint8_t> uncompressed(params.height * params.width * ((params.bitsPerSample + 7) / 8) * params.components);
 
-    auto start = std::chrono::steady_clock::now();
+    const auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < loopCount; ++i)
     {
 
         result = JpegLsDecode(uncompressed.data(), uncompressed.size(), jpeglsCompressed.data(), jpeglsCompressed.size(), &params, nullptr);
         if (result != charls::ApiResult::OK)
+        {
+            std::cout << "Decode failure: " << static_cast<int>(result) << "\n";
             return;
+        }
     }
 
-    auto end = std::chrono::steady_clock::now();
-    auto diff = end - start;
+    const auto end = std::chrono::steady_clock::now();
+    const auto diff = end - start;
     std::cout << "Total decoding time is: " << std::chrono::duration <double, std::milli>(diff).count() << " ms" << std::endl;
     std::cout << "Decoding time per image: " << std::chrono::duration <double, std::milli>(diff).count() / loopCount << " ms" << std::endl;
 }

@@ -15,7 +15,7 @@ public:
     int32_t B{};
     int16_t C{};
     int16_t N{1};
-    
+
     JlsContext() = default;
 
     explicit JlsContext(int32_t a) noexcept :

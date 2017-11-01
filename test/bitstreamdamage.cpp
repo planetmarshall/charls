@@ -1,9 +1,8 @@
-// 
-// (C) Jan de Vaan 2007-2010, all rights reserved. See the accompanying "License.txt" for licensed use. 
-// 
+//
+// (C) Jan de Vaan 2007-2010, all rights reserved. See the accompanying "License.txt" for licensed use.
+//
 
 #include "bitstreamdamage.h"
-#include "config.h"
 #include "util.h"
 
 #include "../src/charls.h"

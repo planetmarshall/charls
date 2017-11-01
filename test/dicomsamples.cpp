@@ -3,7 +3,6 @@
 //
 
 #include "dicomsamples.h"
-#include "config.h"
 #include "util.h"
 #include "../src/charls.h"
 #include <iostream>
@@ -36,13 +35,13 @@ int findstring(std::vector<uint8_t>& container, uint8_t* bytesToFind, unsigned i
 void TestDicomSampleImage(const char* name)
 {
     std::vector<uint8_t> data;
-    bool success = ReadFile(name, &data, 9);
+    const bool success = ReadFile(name, &data, 9);
 
     Assert::IsTrue(success);
 
     uint8_t pixeldataStart[] =  { 0x00, 0x00, 0x01, 0x00, 0xFF, 0xD8, 0xFF, 0xF7 };
 
-    int offset = findstring(data, pixeldataStart, COUNT(pixeldataStart));
+    const int offset = findstring(data, pixeldataStart, COUNT(pixeldataStart));
 
     data.erase(data.begin(), data.begin() + offset - 4);
 
