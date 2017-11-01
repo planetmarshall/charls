@@ -620,22 +620,22 @@ public:
             constexpr JpegLSPresetCodingParameters presets = ComputeDefault(t.MAXVAL, t.NEAR);
             if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
             {
-                if constexpr (traits.bpp == 8)
+                if constexpr (t.bpp == 8)
                 {
                     _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
                     return;
                 }
-                if constexpr (traits.bpp == 10)
+                if constexpr (t.bpp == 10)
                 {
                     _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
                     return;
                 }
-                if constexpr (traits.bpp == 12)
+                if constexpr (t.bpp == 12)
                 {
                     _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
                     return;
                 }
-                if constexpr (traits.bpp == 16)
+                if constexpr (t.bpp == 16)
                 {
                     _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
                     return;
