@@ -24,6 +24,7 @@ addons:
     - clang-5.0
 
 before_script:
+  - $CXX --version
   - mkdir debug
   - cd debug
   - cmake -DCMAKE_BUILD_TYPE=Debug ..

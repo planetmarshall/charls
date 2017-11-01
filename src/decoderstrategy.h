@@ -169,7 +169,7 @@ public:
                 _validBits--;
             }
         }
-        while (_validBits < bufType_bit_count - 8);
+        while (static_cast<size_t>(_validBits) < bufType_bit_count - 8);
 
         _nextFFPosition = FindNextFF();
     }

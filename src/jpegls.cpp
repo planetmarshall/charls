@@ -42,12 +42,6 @@ std::vector<signed char> CreateQLutLossless(int32_t cbit)
     return lut;
 }
 
-template<typename Strategy, typename Traits>
-std::unique_ptr<Strategy> create_codec(const Traits& traits, const JlsParameters& params)
-{
-    return std::make_unique<JlsCodec<Traits, Strategy>>(traits, params);
-}
-
 
 // Functions to build tables used to decode short Golomb codes.
 
@@ -66,7 +60,7 @@ constexpr GolombCodeTable CreateTable(int32_t k)
         // Q is not used when k != 0
         const int32_t merrval = charls::GetMappedErrVal(nerr);
         const std::pair<int32_t, int32_t> paircode = CreateEncodedValue(k, merrval);
-        if (paircode.first > GolombCodeTable::byte_bit_count)
+        if (static_cast<size_t>(paircode.first) > GolombCodeTable::byte_bit_count)
             break;
 
         const GolombCode code(nerr, static_cast<short>(paircode.first));
@@ -78,7 +72,7 @@ constexpr GolombCodeTable CreateTable(int32_t k)
         // Q is not used when k != 0
         const int32_t merrval = charls::GetMappedErrVal(nerr);
         const std::pair<int32_t, int32_t> paircode = CreateEncodedValue(k, merrval);
-        if (paircode.first > GolombCodeTable::byte_bit_count)
+        if (static_cast<size_t>(paircode.first) > GolombCodeTable::byte_bit_count)
             break;
 
         const GolombCode code = GolombCode(nerr, static_cast<short>(paircode.first));
