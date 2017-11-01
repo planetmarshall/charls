@@ -10,7 +10,7 @@
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 
-class DecoderStrategyTester : public DecoderStrategy
+class DecoderStrategyTester : public charls::DecoderStrategy
 {
 public:
     DecoderStrategyTester(const JlsParameters& params, uint8_t* pOutBuf, size_t nOutBufLen) : DecoderStrategy(params)
@@ -27,6 +27,10 @@ public:
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo /*rawStreamInfo*/) override
     {
         return nullptr;
+    }
+
+    void DoScan() override
+    {
     }
 
     int32_t Read(int32_t length) { return ReadLongValue(length); }
@@ -65,7 +69,7 @@ namespace CharLSUnitTest
             encoder.EndScanForward();
             // Note: Correct encoding is tested in EncoderStrategyTest::AppendToBitStreamFFPattern.
 
-            auto length = encoder.GetLengthForward();
+            const auto length = encoder.GetLengthForward();
             DecoderStrategyTester dec(params, encBuf, length);
             for (auto i = 0; i < sizeof(inData) / sizeof(inData[0]); i++)
             {

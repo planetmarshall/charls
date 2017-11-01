@@ -1,5 +1,5 @@
 //
-// (C) CharLS Team 2016, all rights reserved. See the accompanying "License.txt" for licensed use. 
+// (C) CharLS Team 2016, all rights reserved. See the accompanying "License.txt" for licensed use.
 //
 #pragma once
 
@@ -7,7 +7,7 @@
 #include "..\src\encoderstrategy.h"
 
 
-class EncoderStrategyTester : EncoderStrategy
+class EncoderStrategyTester : charls::EncoderStrategy
 {
 public:
     explicit EncoderStrategyTester(const JlsParameters& params) : EncoderStrategy(params)
@@ -21,6 +21,10 @@ public:
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo) override
     {
         return nullptr;
+    }
+
+    void DoScan() override
+    {
     }
 
     void InitForward(ByteStreamInfo& info)
