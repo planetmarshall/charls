@@ -7,9 +7,12 @@
 #define CHARLS_UTIL
 
 #include "publictypes.h"
+#include "constants.h"
 #include <vector>
 #include <system_error>
 #include <memory>
+#include <algorithm>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <cassert>
 
 // Use an uppercase alias for assert to make it clear that it is a pre-processor macro.
@@ -191,5 +194,25 @@ std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::os
 {
     return stream << static_cast<typename std::underlying_type<T>::type>(e);
 }
+
+/// <summary>Clamping function as defined by ISO/IEC 14495-1, Figure C.3</summary>
+constexpr int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue) noexcept
+{
+    if (i > maximumSampleValue || i < j)
+        return j;
+
+    return i;
+}
+
+constexpr JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError) noexcept
+{
+    const int32_t factor = (std::min(maximumSampleValue, 4095) + 128) / 256;
+    const int threshold1 = clamp(factor * (DefaultThreshold1 - 2) + 2 + 3 * allowedLossyError, allowedLossyError + 1, maximumSampleValue);
+    const int threshold2 = clamp(factor * (DefaultThreshold2 - 3) + 3 + 5 * allowedLossyError, threshold1, maximumSampleValue); //-V537
+    const int threshold3 = clamp(factor * (DefaultThreshold3 - 4) + 4 + 7 * allowedLossyError, threshold2, maximumSampleValue);
+
+    return { maximumSampleValue, threshold1, threshold2, threshold3, DefaultResetValue };
+}
+
 
 #endif

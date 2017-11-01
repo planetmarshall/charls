@@ -155,7 +155,47 @@ public:
         return *(_pquant + Di);
     }
 
-    void InitQuantizationLUT();
+    void InitQuantizationLUT(Traits t)
+    {
+        // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
+        if constexpr (t.LosslessOptimized && t.NEAR == 0 && t.MAXVAL == (1 << t.bpp) - 1)
+        {
+            constexpr JpegLSPresetCodingParameters presets = ComputeDefault(t.MAXVAL, t.NEAR);
+            if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
+            {
+                if constexpr (t.bpp == 8)
+                {
+                    _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
+                    return;
+                }
+                if constexpr (t.bpp == 10)
+                {
+                    _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
+                    return;
+                }
+                if constexpr (t.bpp == 12)
+                {
+                    _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
+                    return;
+                }
+                if constexpr (t.bpp == 16)
+                {
+                    _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
+                    return;
+                }
+            }
+        }
+
+        const int32_t RANGE = 1 << t.bpp;
+
+        _rgquant.resize(RANGE * 2);
+
+        _pquant = &_rgquant[RANGE];
+        for (int32_t i = -RANGE; i < RANGE; ++i)
+        {
+            _pquant[i] = QuantizeGratientOrg(i);
+        }
+    }
 
     FORCE_INLINE void EncodeMappedValue(int32_t k, int32_t mappedError, int32_t limit);
 
@@ -251,49 +291,6 @@ FORCE_INLINE void JlsEncoder<Traits>::EncodeMappedValue(int32_t k, int32_t mappe
 
 
 // Sets up a lookup table to "Quantize" sample difference.
-
-template<typename Traits>
-void JlsEncoder<Traits>::InitQuantizationLUT()
-{
-    // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
-    if constexpr (traits.LosslessOptimized && traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
-    {
-        constexpr JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
-        if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
-        {
-            if constexpr (traits.bpp == 8)
-            {
-                _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 10)
-            {
-                _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 12)
-            {
-                _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 16)
-            {
-                _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
-                return;
-            }
-        }
-    }
-
-    const int32_t RANGE = 1 << traits.bpp;
-
-    _rgquant.resize(RANGE * 2);
-
-    _pquant = &_rgquant[RANGE];
-    for (int32_t i = -RANGE; i < RANGE; ++i)
-    {
-        _pquant[i] = QuantizeGratientOrg(i);
-    }
-}
 
 template<typename Traits>
 void JlsEncoder<Traits>::EncodeRIError(CContextRunMode& ctx, int32_t Errval)
@@ -561,7 +558,7 @@ void JlsEncoder<Traits>::InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t 
     T2 = t2;
     T3 = t3;
 
-    InitQuantizationLUT();
+    InitQuantizationLUT(traits);
 
     const int32_t A = std::max(2, (traits.RANGE + 32) / 64);
     for (unsigned int Q = 0; Q < sizeof(_contexts) / sizeof(_contexts[0]); ++Q)
@@ -615,7 +612,47 @@ public:
         return *(_pquant + Di);
     }
 
-    void InitQuantizationLUT();
+    void InitQuantizationLUT(Traits t)
+    {
+        // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
+        if constexpr (t.LosslessOptimized && t.NEAR == 0 && t.MAXVAL == (1 << t.bpp) - 1)
+        {
+            constexpr JpegLSPresetCodingParameters presets = ComputeDefault(t.MAXVAL, t.NEAR);
+            if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
+            {
+                if constexpr (traits.bpp == 8)
+                {
+                    _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
+                    return;
+                }
+                if constexpr (traits.bpp == 10)
+                {
+                    _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
+                    return;
+                }
+                if constexpr (traits.bpp == 12)
+                {
+                    _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
+                    return;
+                }
+                if constexpr (traits.bpp == 16)
+                {
+                    _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
+                    return;
+                }
+            }
+        }
+
+        const int32_t RANGE = 1 << t.bpp;
+
+        _rgquant.resize(RANGE * 2);
+
+        _pquant = &_rgquant[RANGE];
+        for (int32_t i = -RANGE; i < RANGE; ++i)
+        {
+            _pquant[i] = QuantizeGratientOrg(i);
+        }
+    }
 
     int32_t DecodeValue(int32_t k, int32_t limit, int32_t qbpp);
 
@@ -730,49 +767,6 @@ int32_t JlsDecoder<Traits>::DecodeValue(int32_t k, int32_t limit, int32_t qbpp)
 
 
 // Sets up a lookup table to "Quantize" sample difference.
-
-template<typename Traits>
-void JlsDecoder<Traits>::InitQuantizationLUT()
-{
-    // for lossless mode with default parameters, we have precomputed the look up table for bit counts 8, 10, 12 and 16.
-    if constexpr (traits.LosslessOptimized && traits.NEAR == 0 && traits.MAXVAL == (1 << traits.bpp) - 1)
-    {
-        constexpr JpegLSPresetCodingParameters presets = ComputeDefault(traits.MAXVAL, traits.NEAR);
-        if (presets.Threshold1 == T1 && presets.Threshold2 == T2 && presets.Threshold3 == T3)
-        {
-            if constexpr (traits.bpp == 8)
-            {
-                _pquant = &rgquant8Ll[rgquant8Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 10)
-            {
-                _pquant = &rgquant10Ll[rgquant10Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 12)
-            {
-                _pquant = &rgquant12Ll[rgquant12Ll.size() / 2];
-                return;
-            }
-            if constexpr (traits.bpp == 16)
-            {
-                _pquant = &rgquant16Ll[rgquant16Ll.size() / 2];
-                return;
-            }
-        }
-    }
-
-    const int32_t RANGE = 1 << traits.bpp;
-
-    _rgquant.resize(RANGE * 2);
-
-    _pquant = &_rgquant[RANGE];
-    for (int32_t i = -RANGE; i < RANGE; ++i)
-    {
-        _pquant[i] = QuantizeGratientOrg(i);
-    }
-}
 
 
 template<typename Traits>
@@ -1038,7 +1032,7 @@ void JlsDecoder<Traits>::InitParams(int32_t t1, int32_t t2, int32_t t3, int32_t 
     T2 = t2;
     T3 = t3;
 
-    InitQuantizationLUT();
+    InitQuantizationLUT(traits);
 
     const int32_t A = std::max(2, (traits.RANGE + 32) / 64);
     for (unsigned int Q = 0; Q < sizeof(_contexts) / sizeof(_contexts[0]); ++Q)

@@ -14,9 +14,6 @@ struct JlsParameters;
 class JpegCustomParameters;
 
 
-constexpr JpegLSPresetCodingParameters ComputeDefault(int32_t MAXVAL, int32_t NEAR) noexcept;
-
-
 //
 // JpegStreamReader: minimal implementation to read a JPEG byte stream.
 //

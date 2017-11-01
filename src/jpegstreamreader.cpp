@@ -24,16 +24,6 @@ namespace
 const uint8_t jfifID[] = {'J', 'F', 'I', 'F', '\0'};
 
 
-/// <summary>Clamping function as defined by ISO/IEC 14495-1, Figure C.3</summary>
-constexpr int32_t clamp(int32_t i, int32_t j, int32_t maximumSampleValue) noexcept
-{
-    if (i > maximumSampleValue || i < j)
-        return j;
-
-    return i;
-}
-
-
 ApiResult CheckParameterCoherent(const JlsParameters& params) noexcept
 {
     if (params.bitsPerSample < 2 || params.bitsPerSample > 16)
@@ -53,17 +43,6 @@ ApiResult CheckParameterCoherent(const JlsParameters& params) noexcept
 }
 
 } // namespace
-
-
-constexpr JpegLSPresetCodingParameters ComputeDefault(int32_t maximumSampleValue, int32_t allowedLossyError) noexcept
-{
-    const int32_t factor = (std::min(maximumSampleValue, 4095) + 128) / 256;
-    const int threshold1 = clamp(factor * (DefaultThreshold1 - 2) + 2 + 3 * allowedLossyError, allowedLossyError + 1, maximumSampleValue);
-    const int threshold2 = clamp(factor * (DefaultThreshold2 - 3) + 3 + 5 * allowedLossyError, threshold1, maximumSampleValue); //-V537
-    const int threshold3 = clamp(factor * (DefaultThreshold3 - 4) + 4 + 7 * allowedLossyError, threshold2, maximumSampleValue);
-
-    return {maximumSampleValue, threshold1, threshold2, threshold3, DefaultResetValue};
-}
 
 
 void JpegImageDataSegment::Serialize(JpegStreamWriter& streamWriter)

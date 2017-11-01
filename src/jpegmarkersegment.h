@@ -53,8 +53,8 @@ public:
     static std::unique_ptr<JpegMarkerSegment> CreateStartOfScanSegment(int componentIndex, int componentCount, int allowedLossyError, charls::InterleaveMode interleaveMode);
 
     JpegMarkerSegment(JpegMarkerCode markerCode, std::vector<uint8_t>&& content) :
-        _markerCode(markerCode),
-        _content(content)
+        _markerCode{markerCode},
+        _content{content}
     {
     }
 
