@@ -254,7 +254,15 @@ typename Traits::SAMPLE JlsEncoder<Traits>::DoRegular(int32_t Qs, int32_t x, int
     const int32_t ErrVal = traits.ComputeErrVal(ApplySign(x - Px, sign));
 
     EncodeMappedValue(k, GetMappedErrVal(ctx.GetErrorCorrection(k | traits.NEAR) ^ ErrVal), traits.LIMIT);
-    ctx.UpdateVariables(ErrVal, traits.NEAR, traits.RESET);
+
+    if constexpr (traits.LosslessOptimized && traits.RESET == DefaultResetValue)
+    {
+        ctx.UpdateVariables(ErrVal);
+    }
+    else
+    {
+        ctx.UpdateVariables(ErrVal, traits.NEAR, traits.RESET);
+    }
     ASSERT(traits.IsNear(traits.ComputeReconstructedSample(Px, ApplySign(ErrVal, sign)), x));
     return static_cast<SAMPLE>(traits.ComputeReconstructedSample(Px, ApplySign(ErrVal, sign)));
 }
@@ -745,7 +753,16 @@ typename Traits::SAMPLE JlsDecoder<Traits>::DoRegular(int32_t Qs, int32_t, int32
     {
         ErrVal = ErrVal ^ ctx.GetErrorCorrection(traits.NEAR);
     }
-    ctx.UpdateVariables(ErrVal, traits.NEAR, traits.RESET);
+
+    if constexpr (traits.LosslessOptimized && traits.RESET == DefaultResetValue)
+    {
+        ctx.UpdateVariables(ErrVal);
+    }
+    else
+    {
+        ctx.UpdateVariables(ErrVal, traits.NEAR, traits.RESET);
+    }
+
     ErrVal = ApplySign(ErrVal, sign);
     return traits.ComputeReconstructedSample(Px, ErrVal);
 }

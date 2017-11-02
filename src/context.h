@@ -77,6 +77,52 @@ public:
         ASSERT(N != 0);
     }
 
+    FORCE_INLINE void UpdateVariables(int32_t errorValue) noexcept
+    {
+        ASSERT(N != 0);
+
+        // For performance work on copies of A,B,N (compiler will use registers).
+        int a = A + std::abs(errorValue);
+        int b = B + errorValue * (2 * 0 + 1);
+        int n = N;
+
+        ASSERT(a < 65536 * 256);
+        ASSERT(std::abs(b) < 65536 * 256);
+
+        if (n == DefaultResetValue)
+        {
+            a = a >> 1;
+            b = b >> 1;
+            n = n >> 1;
+        }
+
+        A = a;
+        n = n + 1;
+        N = static_cast<int16_t>(n);
+
+        if (b + n <= 0)
+        {
+            b = b + n;
+            if (b <= -n)
+            {
+                b = -n + 1;
+            }
+            C = C - (C > -128);
+        }
+        else  if (b > 0)
+        {
+            b = b - n;
+            if (b > 0)
+            {
+                b = 0;
+            }
+            C = C + (C < 127);
+        }
+        B = b;
+
+        ASSERT(N != 0);
+    }
+
     FORCE_INLINE int32_t GetGolomb() const noexcept
     {
         const int32_t Ntest = N;
