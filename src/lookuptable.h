@@ -13,18 +13,18 @@ struct GolombCode
 {
     GolombCode() = default;
 
-    constexpr GolombCode(int32_t value, int32_t bit_count) :
+    constexpr GolombCode(int32_t value, int32_t bit_count) noexcept :
         value_(value),
         bit_count_(bit_count)
     {
     }
 
-    constexpr int32_t GetValue() const
+    constexpr int32_t GetValue() const noexcept
     {
         return value_;
     }
 
-    constexpr int32_t GetBitCount() const
+    constexpr int32_t GetBitCount() const noexcept
     {
         return bit_count_;
     }
@@ -40,7 +40,7 @@ class GolombCodeTable
 public:
     static constexpr size_t byte_bit_count = 8;
 
-    constexpr void AddEntry(uint8_t bvalue, GolombCode code)
+    constexpr void AddEntry(uint8_t bvalue, GolombCode code) noexcept
     {
         const int32_t bit_count = code.GetBitCount();
         ASSERT(static_cast<size_t>(bit_count) <= byte_bit_count);
@@ -52,8 +52,9 @@ public:
         }
     }
 
-    FORCE_INLINE const GolombCode& Get(int32_t value) const noexcept
+    constexpr FORCE_INLINE const GolombCode& Get(int32_t value) const noexcept
     {
+        ASSERT(value >= 0 && value < (1 << byte_bit_count));
         return codes_[value];
     }
 
