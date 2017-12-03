@@ -142,7 +142,13 @@ struct FromBigEndian<4>
 {
     FORCE_INLINE static unsigned int Read(const uint8_t* pbyte) noexcept
     {
+#ifdef _MSC_VER
+        const unsigned int value = _byteswap_ulong(*reinterpret_cast<const unsigned long*>(pbyte));
+        ASSERT(value == static_cast<unsigned int>((pbyte[0] << 24) + (pbyte[1] << 16) + (pbyte[2] << 8) + (pbyte[3] << 0)));
+        return value;
+#else
         return (pbyte[0] << 24) + (pbyte[1] << 16) + (pbyte[2] << 8) + (pbyte[3] << 0);
+#endif
     }
 };
 
