@@ -15,6 +15,70 @@
 namespace charls
 {
 
+inline bool ContainsFF(size_t n)
+{
+    return static_cast<uint8_t>(n) == 0xFF ||
+        static_cast<uint8_t>(n >> 8) == 0xFF ||
+        static_cast<uint8_t>(n >> 16) == 0xFF ||
+        static_cast<uint8_t>(n >> 24) == 0xFF;
+}
+
+#if 0
+inline bool ReadAndCheckFF(const uint8_t *p, size_t& value)
+{
+    size_t nextCache = p[0];
+    if (nextCache == 0xFF)
+        return false;
+
+    uint8_t nextByte = p[1];
+    if (nextByte == 0xFF)
+        return false;
+
+    nextCache = (nextCache << 8) | nextByte;
+    nextByte = p[2];
+    if (nextByte == 0xFF)
+        return false;
+
+    nextCache = (nextCache << 8) | nextByte;
+
+    nextByte = p[3];
+    if (nextByte == 0xFF)
+        return false;
+
+    return true;
+}
+#endif
+
+inline size_t ReadAndCheckFF2(const uint8_t *p)
+{
+    size_t nextCache = *p;
+    if (nextCache == 0xFF)
+        return 0xFF;
+
+    p++;
+    uint8_t nextByte = *p;
+    if (nextByte == 0xFF)
+        return 0xFF;
+
+    nextCache = (nextCache << 8) | nextByte;
+
+    p++;
+    nextByte = *p;
+    if (nextByte == 0xFF)
+        return 0xFF;
+
+    nextCache = (nextCache << 8) | nextByte;
+
+    p++;
+    nextByte = *p;
+    if (nextByte == 0xFF)
+        return 0xFF;
+
+    nextCache = (nextCache << 8) | nextByte;
+    return nextCache;
+}
+
+
 // Purpose: Implements encoding to stream of bits. In encoding mode JpegLsCodec inherits from EncoderStrategy
 class DecoderStrategy : public CodecBase
 {
@@ -37,7 +101,7 @@ public:
 
     void Init(ByteStreamInfo& compressedStream)
     {
-        _validBits = 0;
+        validCacheBitCount_ = 0;
         _readCache = 0;
 
         if (compressedStream.rawStream)
@@ -55,8 +119,7 @@ public:
             _endPosition = _position + compressedStream.count;
         }
 
-        _nextFFPosition = FindNextFF();
-        MakeValid();
+        FillReadCache();
     }
 
     void AddBytesFromStream()
@@ -77,7 +140,6 @@ public:
 
         _position += offset;
         _endPosition += offset;
-        _nextFFPosition += offset;
 
         const std::streamsize readbytes = _byteStream->sgetn(reinterpret_cast<char*>(_endPosition), _buffer.size() - count);
         _endPosition += readbytes;
@@ -85,7 +147,7 @@ public:
 
     FORCE_INLINE void Skip(int32_t length) noexcept
     {
-        _validBits -= length;
+        validCacheBitCount_ -= length;
         _readCache = _readCache << length;
     }
 
@@ -112,86 +174,9 @@ public:
             throw charls_error(charls::ApiResult::TooMuchCompressedData);
     }
 
-    FORCE_INLINE bool OptimizedRead() noexcept
-    {
-        // Easy & fast: if there is no 0xFF byte in sight, we can read without bit stuffing
-        if (_position < _nextFFPosition - (sizeof(bufType)-1))
-        {
-            _readCache |= FromBigEndian<sizeof(bufType)>::Read(_position) >> _validBits;
-            const int bytesToRead = (bufType_bit_count - _validBits) >> 3;
-            _position += bytesToRead;
-            _validBits += bytesToRead * 8;
-            ASSERT(static_cast<size_t>(_validBits) >= bufType_bit_count - 8);
-            return true;
-        }
-        return false;
-    }
-
-    void MakeValid()
-    {
-        ASSERT(static_cast<size_t>(_validBits) <=bufType_bit_count - 8);
-
-        if (OptimizedRead())
-            return;
-
-        AddBytesFromStream();
-
-        do
-        {
-            if (_position >= _endPosition)
-            {
-                if (_validBits <= 0)
-                    throw charls_error(charls::ApiResult::InvalidCompressedData);
-
-                return;
-            }
-
-            const bufType valnew = _position[0];
-
-            if (valnew == static_cast<bufType>(JpegMarkerCode::Start))
-            {
-                // JPEG bit stream rule: no FF may be followed by 0x80 or higher
-                if (_position == _endPosition - 1 || (_position[1] & 0x80) != 0)
-                {
-                    if (_validBits <= 0)
-                        throw charls_error(charls::ApiResult::InvalidCompressedData);
-
-                    return;
-                }
-            }
-
-            _readCache |= valnew << (bufType_bit_count - 8 - _validBits);
-            _position += 1;
-            _validBits += 8;
-
-            if (valnew == static_cast<bufType>(JpegMarkerCode::Start))
-            {
-                _validBits--;
-            }
-        }
-        while (static_cast<size_t>(_validBits) < bufType_bit_count - 8);
-
-        _nextFFPosition = FindNextFF();
-    }
-
-    uint8_t* FindNextFF() const noexcept
-    {
-        auto positionNextFF = _position;
-
-        while (positionNextFF < _endPosition)
-        {
-            if (*positionNextFF == static_cast<uint8_t>(JpegMarkerCode::Start))
-                break;
-
-            positionNextFF++;
-        }
-
-        return positionNextFF;
-    }
-
     uint8_t* GetCurBytePos() const noexcept
     {
-        int32_t validBits = _validBits;
+        int32_t validBits = validCacheBitCount_;
         uint8_t* compressedBytes = _position;
 
         for (;;)
@@ -208,53 +193,53 @@ public:
 
     FORCE_INLINE int32_t ReadValue(int32_t length)
     {
-        if (_validBits < length)
+        if (validCacheBitCount_ < length)
         {
-            MakeValid();
-            if (_validBits < length)
+            FillReadCache();
+            if (validCacheBitCount_ < length)
                 throw charls_error(charls::ApiResult::InvalidCompressedData);
         }
 
-        ASSERT(length != 0 && length <= _validBits);
+        ASSERT(length != 0 && length <= validCacheBitCount_);
         ASSERT(length < 32);
-        const int32_t result = static_cast<int32_t>(_readCache >> (bufType_bit_count - length));
+        const int32_t result = static_cast<int32_t>(_readCache >> (readCache_bit_count - length));
         Skip(length);
         return result;
     }
 
     FORCE_INLINE int32_t PeekByte()
     {
-        if (_validBits < 8)
+        if (validCacheBitCount_ < 8)
         {
-            MakeValid();
+            FillReadCache();
         }
 
-        return static_cast<int32_t>(_readCache >> (bufType_bit_count - 8));
+        return static_cast<int32_t>(_readCache >> (readCache_bit_count - 8));
     }
 
     FORCE_INLINE bool ReadBit()
     {
-        if (_validBits <= 0)
+        if (validCacheBitCount_ <= 0)
         {
-            MakeValid();
+            FillReadCache();
         }
 
-        const bool bSet = (_readCache & (bufType(1) << (bufType_bit_count - 1))) != 0;
+        const bool bSet = (_readCache & (std::size_t(1) << (readCache_bit_count - 1))) != 0;
         Skip(1);
         return bSet;
     }
 
     FORCE_INLINE int32_t Peek0Bits()
     {
-        if (_validBits < 16)
+        if (validCacheBitCount_ < 16)
         {
-            MakeValid();
+            FillReadCache();
         }
-        bufType valTest = _readCache;
+        std::size_t valTest = _readCache;
 
         for (int32_t count = 0; count < 16; count++)
         {
-            if ((valTest & (bufType(1) << (bufType_bit_count - 1))) != 0)
+            if ((valTest & (std::size_t(1) << (readCache_bit_count - 1))) != 0)
                 return count;
 
             valTest <<= 1;
@@ -296,17 +281,105 @@ protected:
     std::unique_ptr<ProcessLine> _processLine;
 
 private:
-    using bufType = std::size_t;
-    static constexpr size_t bufType_bit_count = sizeof(bufType) * 8;
+    void FillReadCache()
+    {
+        ASSERT(static_cast<size_t>(validCacheBitCount_) <= readCache_bit_count - 8);
+
+        if (OptimizedFill())
+            return;
+
+        FillReadCacheNotFast();
+    }
+
+    void FillReadCacheNotFast()
+    {
+        AddBytesFromStream();
+
+        do
+        {
+            if (_position >= _endPosition)
+            {
+                if (validCacheBitCount_ <= 0)
+                    throw charls_error(charls::ApiResult::InvalidCompressedData);
+
+                return;
+            }
+
+            const std::size_t valnew = _position[0];
+
+            if (valnew == static_cast<std::size_t>(JpegMarkerCode::Start))
+            {
+                // JPEG bit stream rule: no FF may be followed by 0x80 or higher
+                if (_position == _endPosition - 1 || (_position[1] & 0x80) != 0)
+                {
+                    if (validCacheBitCount_ <= 0)
+                        throw charls_error(charls::ApiResult::InvalidCompressedData);
+
+                    return;
+                }
+            }
+
+            _readCache |= valnew << (readCache_bit_count - 8 - validCacheBitCount_);
+            _position += 1;
+            validCacheBitCount_ += 8;
+
+            if (valnew == static_cast<std::size_t>(JpegMarkerCode::Start))
+            {
+                validCacheBitCount_--;
+            }
+        } while (static_cast<size_t>(validCacheBitCount_) < readCache_bit_count - 8);
+    }
+
+    FORCE_INLINE bool OptimizedFill() noexcept
+    {
+        // Easy & fast: if there is no 0xFF byte in sight, we can read without bit stuffing
+        if (_position < _endPosition - sizeof _readCache)
+        {
+            uint8_t *p = _position;
+
+            size_t nextCache = *p;
+            if (nextCache == 0xFF)
+                return false;
+
+            p++;
+            uint8_t nextByte = *p;
+            if (nextByte == 0xFF)
+                return false;
+
+            nextCache = (nextCache << 8) | nextByte;
+
+            p++;
+            nextByte = *p;
+            if (nextByte == 0xFF)
+                return false;
+
+            nextCache = (nextCache << 8) | nextByte;
+
+            p++;
+            nextByte = *p;
+            if (nextByte == 0xFF)
+                return false;
+
+            nextCache = (nextCache << 8) | nextByte;
+
+            _readCache |= nextCache >> validCacheBitCount_;
+            const size_t bytesAddedToCache = (readCache_bit_count - validCacheBitCount_) / 8;
+            _position += bytesAddedToCache;
+            validCacheBitCount_ += bytesAddedToCache * 8;
+            ASSERT(static_cast<size_t>(validCacheBitCount_) >= readCache_bit_count - 8);
+            return true;
+        }
+        return false;
+    }
+
+    static constexpr size_t readCache_bit_count = sizeof(std::size_t) * 8;
 
     std::vector<uint8_t> _buffer;
     std::basic_streambuf<char>* _byteStream{};
 
-    // decoding
-    bufType _readCache{};
-    int32_t _validBits{};
+    std::size_t _readCache{};
+    int32_t validCacheBitCount_{};
     uint8_t* _position{};
-    uint8_t* _nextFFPosition{};
     uint8_t* _endPosition{};
 };
 
