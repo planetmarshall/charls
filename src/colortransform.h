@@ -53,7 +53,7 @@ struct TransformHp1
         }
     };
 
-    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const
+    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const noexcept
     {
         Triplet<T> hp1;
         hp1.v2 = static_cast<T>(green);
@@ -80,7 +80,7 @@ struct TransformHp2
         {
         }
 
-        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const
+        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const noexcept
         {
             Triplet<T> rgb;
             rgb.R = static_cast<T>(v1 + v2 - Range / 2);                     // new R
@@ -113,7 +113,7 @@ struct TransformHp3
         {
         }
 
-        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const
+        FORCE_INLINE Triplet<T> operator()(int v1, int v2, int v3) const noexcept
         {
             const int G = v1 - ((v3 + v2) >> 2) + Range / 4;
             Triplet<T> rgb;
@@ -124,7 +124,7 @@ struct TransformHp3
         }
     };
 
-    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const
+    FORCE_INLINE Triplet<T> operator()(int red, int green, int blue) const noexcept
     {
         Triplet<T> hp3;
         hp3.v2 = static_cast<T>(blue - green + Range / 2);

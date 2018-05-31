@@ -34,6 +34,14 @@
 #  endif
 #endif
 
+#ifdef _MSC_VER
+#define WARNING_SUPPRESS(x) __pragma(warning(push)) __pragma(warning(disable : x))
+#define WARNING_UNSUPPRESS() __pragma(warning(pop))
+#else
+#define WARNING_SUPPRESS(x)
+#define WARNING_UNSUPPRESS()
+#endif
+
 
 constexpr size_t int32_t_bit_count = sizeof(int32_t) * 8;
 
@@ -48,7 +56,7 @@ inline void push_back(std::vector<uint8_t>& values, uint16_t value)
 constexpr int32_t log_2(int32_t n) noexcept
 {
     int32_t x = 0;
-    while (n > (int32_t(1) << x))
+    while (n > (static_cast<int32_t>(1) << x))
     {
         ++x;
     }
@@ -71,7 +79,7 @@ constexpr int32_t BitWiseSign(int32_t i) noexcept
 template<typename T>
 struct Triplet
 {
-    Triplet() :
+    Triplet() noexcept :
         v1(0),
         v2(0),
         v3(0)
@@ -120,8 +128,13 @@ struct Quad : Triplet<sample>
         v4(0)
         {}
 
-    Quad(Triplet<sample> triplet, int32_t alpha) noexcept : Triplet<sample>(triplet), A(static_cast<sample>(alpha))
+    WARNING_SUPPRESS(26495) // false warning that v4 is unintialized
+    Quad(Triplet<sample> triplet, int32_t alpha) noexcept
+            :
+        Triplet<sample>(triplet),
+        A(static_cast<sample>(alpha))
         {}
+    WARNING_UNSUPPRESS()
 
     union
     {
@@ -158,10 +171,10 @@ struct FromBigEndian<8>
 {
     FORCE_INLINE static uint64_t Read(const uint8_t* pbyte) noexcept
     {
-        return (static_cast<uint64_t>(pbyte[0]) << 56) + (static_cast<uint64_t>(pbyte[1]) << 48) +
-               (static_cast<uint64_t>(pbyte[2]) << 40) + (static_cast<uint64_t>(pbyte[3]) << 32) +
-               (static_cast<uint64_t>(pbyte[4]) << 24) + (static_cast<uint64_t>(pbyte[5]) << 16) +
-               (static_cast<uint64_t>(pbyte[6]) <<  8) + (static_cast<uint64_t>(pbyte[7]) << 0);
+        return (static_cast<uint64_t>(pbyte[0]) << 56u) + (static_cast<uint64_t>(pbyte[1]) << 48u) +
+               (static_cast<uint64_t>(pbyte[2]) << 40u) + (static_cast<uint64_t>(pbyte[3]) << 32u) +
+               (static_cast<uint64_t>(pbyte[4]) << 24u) + (static_cast<uint64_t>(pbyte[5]) << 16u) +
+               (static_cast<uint64_t>(pbyte[6]) <<  8u) + (static_cast<uint64_t>(pbyte[7]) << 0u);
     }
 };
 

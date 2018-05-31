@@ -38,9 +38,9 @@ bool ScanFile(const char* strNameEncoded, std::vector<uint8_t>* rgbyteFile, JlsP
     std::basic_filebuf<char> jlsFile;
     jlsFile.open(strNameEncoded, mode_input);
 
-    ByteStreamInfo rawStreamInfo = {&jlsFile, nullptr, 0};
+    const ByteStreamInfo rawStreamInfo = {&jlsFile, nullptr, 0};
 
-    auto err = JpegLsReadHeaderStream(rawStreamInfo, params, nullptr);
+    const auto err = JpegLsReadHeaderStream(rawStreamInfo, params, nullptr);
     Assert::IsTrue(err == ApiResult::OK);
     return err == ApiResult::OK;
 }
@@ -48,8 +48,8 @@ bool ScanFile(const char* strNameEncoded, std::vector<uint8_t>* rgbyteFile, JlsP
 
 void TestTraits16bit()
 {
-    auto traits1 = DefaultTraits<uint16_t, uint16_t>(4095,0);
-    auto traits2 = LosslessTraits<uint16_t, 12>();
+    const auto traits1 = DefaultTraits<uint16_t, uint16_t>(4095,0);
+    const auto traits2 = LosslessTraits<uint16_t, 12>();
 
     Assert::IsTrue(traits1.LIMIT == traits2.LIMIT);
     Assert::IsTrue(traits1.MAXVAL == traits2.MAXVAL);
@@ -73,8 +73,8 @@ void TestTraits16bit()
 
 void TestTraits8bit()
 {
-    auto traits1 = DefaultTraits<uint8_t, uint8_t>(255,0);
-    auto traits2 = LosslessTraits<uint8_t, 8>();
+    const auto traits1 = DefaultTraits<uint8_t, uint8_t>(255,0);
+    const auto traits2 = LosslessTraits<uint8_t, 8>();
 
     Assert::IsTrue(traits1.LIMIT == traits2.LIMIT);
     Assert::IsTrue(traits1.MAXVAL == traits2.MAXVAL);
@@ -96,28 +96,28 @@ void TestTraits8bit()
 }
 
 
-std::vector<uint8_t> MakeSomeNoise(int length, int bitcount, int seed)
+std::vector<uint8_t> MakeSomeNoise(size_t length, size_t bitcount, int seed)
 {
     srand(seed);
     std::vector<uint8_t> rgbyteNoise(length);
-    uint8_t mask = static_cast<uint8_t>((1 << bitcount) - 1);
-    for (int icol= 0; icol < length; ++icol)
+    const auto mask = static_cast<uint8_t>((1 << bitcount) - 1);
+    for (size_t icol = 0; icol < length; ++icol)
     {
-        uint8_t val = uint8_t(rand());
-        rgbyteNoise[icol] = uint8_t(val & mask);
+        const auto val = static_cast<uint8_t>(rand());
+        rgbyteNoise[icol] = static_cast<uint8_t>(val & mask);
     }
     return rgbyteNoise;
 }
 
 
-std::vector<uint8_t> MakeSomeNoise16bit(int length, int bitcount, int seed)
+std::vector<uint8_t> MakeSomeNoise16bit(size_t length, int bitcount, int seed)
 {
     srand(seed);
     std::vector<uint8_t> buffer(length * 2);
-    uint16_t mask = static_cast<uint16_t>((1 << bitcount) - 1);
-    for (int i = 0; i < length; i = i + 2)
+    const auto mask = static_cast<uint16_t>((1 << bitcount) - 1);
+    for (size_t i = 0; i < length; i = i + 2)
     {
-        uint16_t value = static_cast<uint16_t>(rand()) & mask;
+        const uint16_t value = static_cast<uint16_t>(rand()) & mask;
 
         buffer[i] = static_cast<uint8_t>(value);
         buffer[i] = static_cast<uint8_t>(value >> 8);
@@ -129,15 +129,15 @@ std::vector<uint8_t> MakeSomeNoise16bit(int length, int bitcount, int seed)
 
 void TestNoiseImage()
 {
-    Size size2 = Size(512, 512);
+    const Size size2 = Size(512, 512);
 
-    for (int bitDepth = 8; bitDepth >=2; --bitDepth)
+    for (size_t bitDepth = 8; bitDepth >=2; --bitDepth)
     {
         std::stringstream label;
         label << "noise, bit depth: " << bitDepth;
 
-        std::vector<uint8_t> noiseBytes = MakeSomeNoise(size2.cx * size2.cy, bitDepth, 21344);
-        TestRoundTrip(label.str().c_str(), noiseBytes, size2, bitDepth, 1);
+        const std::vector<uint8_t> noiseBytes = MakeSomeNoise(size2.cx * size2.cy, bitDepth, 21344);
+        TestRoundTrip(label.str().c_str(), noiseBytes, size2, static_cast<int>(bitDepth), 1);
     }
 
     for (int bitDepth = 16; bitDepth > 8; --bitDepth)
@@ -145,7 +145,7 @@ void TestNoiseImage()
         std::stringstream label;
         label << "noise, bit depth: " << bitDepth;
 
-        std::vector<uint8_t> noiseBytes = MakeSomeNoise16bit(size2.cx * size2.cy, bitDepth, 21344);
+        const std::vector<uint8_t> noiseBytes = MakeSomeNoise16bit(size2.cx * size2.cy, bitDepth, 21344);
         TestRoundTrip(label.str().c_str(), noiseBytes, size2, bitDepth, 1);
     }
 }
@@ -153,15 +153,15 @@ void TestNoiseImage()
 
 void TestNoiseImageWithCustomReset()
 {
-    Size size = Size(512, 512);
+    const Size size{512, 512};
     const int bitDepth = 16;
-    std::vector<uint8_t> noiseBytes = MakeSomeNoise16bit(size.cx * size.cy, bitDepth, 21344);
+    const std::vector<uint8_t> noiseBytes = MakeSomeNoise16bit(size.cx * size.cy, bitDepth, 21344);
 
-    JlsParameters params = JlsParameters();
+    JlsParameters params{};
     params.components = 1;
     params.bitsPerSample = bitDepth;
-    params.height = size.cy;
-    params.width = size.cx;
+    params.height = static_cast<int>(size.cy);
+    params.width = static_cast<int>(size.cx);
     params.custom.MaximumSampleValue = (1 << bitDepth) - 1;
     params.custom.ResetValue = 63;
 
@@ -195,7 +195,7 @@ void TestFailOnTooSmallOutputBuffer()
 void TestBgra()
 {
     char rgbyteTest[] = "RGBARGBARGBARGBA1234";
-    char rgbyteComp[] = "BGRABGRABGRABGRA1234";
+    const char rgbyteComp[] = "BGRABGRABGRABGRA1234";
     TransformRgbToBgr(rgbyteTest, 4, 4);
     Assert::IsTrue(strcmp(rgbyteTest, rgbyteComp) == 0);
 }
@@ -203,22 +203,22 @@ void TestBgra()
 
 void TestBgr()
 {
-    JlsParameters params;
+    JlsParameters params{};
     std::vector<uint8_t> rgbyteEncoded;
     ScanFile("test/conformance/T8C2E3.JLS", &rgbyteEncoded, &params);
-    std::vector<uint8_t> rgbyteDecoded(params.width * params.height * params.components);
+    std::vector<uint8_t> rgbyteDecoded(static_cast<size_t>(params.width) * params.height * params.components);
 
     params.outputBgr = static_cast<char>(true);
 
-    auto err = JpegLsDecode(&rgbyteDecoded[0], rgbyteDecoded.size(), &rgbyteEncoded[0], rgbyteEncoded.size(), &params, nullptr);
+    const auto err = JpegLsDecode(&rgbyteDecoded[0], rgbyteDecoded.size(), &rgbyteEncoded[0], rgbyteEncoded.size(), &params, nullptr);
     Assert::IsTrue(err == ApiResult::OK);
 
     Assert::IsTrue(rgbyteDecoded[0] == 0x69);
     Assert::IsTrue(rgbyteDecoded[1] == 0x77);
     Assert::IsTrue(rgbyteDecoded[2] == 0xa1);
-    Assert::IsTrue(rgbyteDecoded[params.width * 6 + 3] == 0x2d);
-    Assert::IsTrue(rgbyteDecoded[params.width * 6 + 4] == 0x43);
-    Assert::IsTrue(rgbyteDecoded[params.width * 6 + 5] == 0x4d);
+    Assert::IsTrue(rgbyteDecoded[static_cast<size_t>(params.width) * 6 + 3] == 0x2d);
+    Assert::IsTrue(rgbyteDecoded[static_cast<size_t>(params.width) * 6 + 4] == 0x43);
+    Assert::IsTrue(rgbyteDecoded[static_cast<size_t>(params.width) * 6 + 5] == 0x4d);
 }
 
 
@@ -229,7 +229,7 @@ void TestTooSmallOutputBuffer()
         return;
 
     std::vector<uint8_t> rgbyteOut(512 * 511);
-    auto error = JpegLsDecode(&rgbyteOut[0], rgbyteOut.size(), &rgbyteCompressed[0], rgbyteCompressed.size(), nullptr, nullptr);
+    const auto error = JpegLsDecode(&rgbyteOut[0], rgbyteOut.size(), &rgbyteCompressed[0], rgbyteCompressed.size(), nullptr, nullptr);
 
     Assert::IsTrue(error == ApiResult::UncompressedBufferTooSmall);
 }
@@ -250,36 +250,36 @@ void TestTooSmallOutputBuffer()
 
 void TestDecodeBitStreamWithNoMarkerStart()
 {
-    uint8_t encodedData[2] = { 0x33, 0x33 };
+    const uint8_t encodedData[2] = { 0x33, 0x33 };
     uint8_t output[1000];
 
-    auto error = JpegLsDecode(output, 1000, encodedData, 2, nullptr, nullptr);
+    const auto error = JpegLsDecode(output, 1000, encodedData, 2, nullptr, nullptr);
     Assert::IsTrue(error == ApiResult::MissingJpegMarkerStart);
 }
 
 
 void TestDecodeBitStreamWithUnsupportedEncoding()
 {
-    uint8_t encodedData[6] = { 0xFF, 0xD8, // Start Of Image (JPEG_SOI)
-                            0xFF, 0xC3, // Start Of Frame (lossless, huffman) (JPEG_SOF_3)
-                            0x00, 0x00  // Lenght of data of the marker
+    const uint8_t encodedData[6] = { 0xFF, 0xD8, // Start Of Image (JPEG_SOI)
+                            0xFF, 0xC3, // Start Of Frame (lossless, Huffman) (JPEG_SOF_3)
+                            0x00, 0x00  // Length of data of the marker
                           };
     uint8_t output[1000];
 
-    auto error = JpegLsDecode(output, 1000, encodedData, 6, nullptr, nullptr);
+    const auto error = JpegLsDecode(output, 1000, encodedData, 6, nullptr, nullptr);
     Assert::IsTrue(error == ApiResult::UnsupportedEncoding);
 }
 
 
 void TestDecodeBitStreamWithUnknownJpegMarker()
 {
-    uint8_t encodedData[6] = { 0xFF, 0xD8, // Start Of Image (JPEG_SOI)
+    const uint8_t encodedData[6] = { 0xFF, 0xD8, // Start Of Image (JPEG_SOI)
         0xFF, 0x01, // Undefined marker
-        0x00, 0x00  // Lenght of data of the marker
+        0x00, 0x00  // Length of data of the marker
     };
     uint8_t output[1000];
 
-    auto error = JpegLsDecode(output, 1000, encodedData, 6, nullptr, nullptr);
+    const auto error = JpegLsDecode(output, 1000, encodedData, 6, nullptr, nullptr);
     Assert::IsTrue(error == ApiResult::UnknownJpegMarker);
 }
 
@@ -287,22 +287,22 @@ void TestDecodeBitStreamWithUnknownJpegMarker()
 void TestDecodeRect()
 {
     std::vector<uint8_t> rgbyteCompressed;
-    JlsParameters params;
+    JlsParameters params{};
     if (!ScanFile("test/lena8b.jls", &rgbyteCompressed, &params))
         return;
 
-    std::vector<uint8_t> rgbyteOutFull(params.width*params.height*params.components);
+    std::vector<uint8_t> rgbyteOutFull(static_cast<size_t>(params.width) * params.height*params.components);
     auto error = JpegLsDecode(&rgbyteOutFull[0], rgbyteOutFull.size(), &rgbyteCompressed[0], rgbyteCompressed.size(), nullptr, nullptr);
     Assert::IsTrue(error == ApiResult::OK);
 
-    JlsRect rect = { 128, 128, 256, 1 };
-    std::vector<uint8_t> rgbyteOut(rect.Width * rect.Height);
+    const JlsRect rect = { 128, 128, 256, 1 };
+    std::vector<uint8_t> rgbyteOut(static_cast<size_t>(rect.Width) * rect.Height);
     rgbyteOut.push_back(0x1f);
     error = JpegLsDecodeRect(&rgbyteOut[0], rgbyteOut.size(), &rgbyteCompressed[0], rgbyteCompressed.size(), rect, nullptr, nullptr);
     Assert::IsTrue(error == ApiResult::OK);
 
-    Assert::IsTrue(memcmp(&rgbyteOutFull[rect.X + rect.Y*512], &rgbyteOut[0], rect.Width * rect.Height) == 0);
-    Assert::IsTrue(rgbyteOut[rect.Width * rect.Height] == 0x1f);
+    Assert::IsTrue(memcmp(&rgbyteOutFull[rect.X + static_cast<size_t>(rect.Y) * 512], &rgbyteOut[0], static_cast<size_t>(rect.Width) * rect.Height) == 0);
+    Assert::IsTrue(rgbyteOut[static_cast<size_t>(rect.Width) * rect.Height] == 0x1f);
 }
 
 
@@ -312,10 +312,10 @@ void TestEncodeFromStream(const char* file, int offset, int width, int height, i
     myFile.open(file, mode_input);
     Assert::IsTrue(myFile.is_open());
 
-    myFile.pubseekoff(std::streamoff(offset), std::ios_base::cur);
-    ByteStreamInfo rawStreamInfo = {&myFile, nullptr, 0};
+    myFile.pubseekoff(static_cast<std::streamoff>(offset), std::ios_base::cur);
+    const ByteStreamInfo rawStreamInfo = {&myFile, nullptr, 0};
 
-    uint8_t* compressed = new uint8_t[width * height * ccomponent * 2];
+    std::vector<uint8_t> compressed(static_cast<size_t>(width) * height * ccomponent * 2);
     JlsParameters params = JlsParameters();
     params.height = height;
     params.width = width;
@@ -324,17 +324,16 @@ void TestEncodeFromStream(const char* file, int offset, int width, int height, i
     params.interleaveMode = ilv;
     size_t bytesWritten = 0;
 
-    JpegLsEncodeStream(FromByteArray(compressed, width * height * ccomponent * 2), bytesWritten, rawStreamInfo, params, nullptr);
+    JpegLsEncodeStream(FromByteArray(compressed.data(), static_cast<size_t>(width) * height * ccomponent * 2), bytesWritten, rawStreamInfo, params, nullptr);
     Assert::IsTrue(bytesWritten == expectedLength);
 
-    delete[] compressed;
     myFile.close();
 }
 
 
 bool DecodeToPnm(std::istream& input, std::ostream& output)
 {
-    ByteStreamInfo inputInfo = { input.rdbuf(), nullptr, 0 };
+    const ByteStreamInfo inputInfo{input.rdbuf(), nullptr, 0};
 
     auto params = JlsParameters();
     auto result = JpegLsReadHeaderStream(inputInfo, &params, nullptr);
@@ -342,10 +341,10 @@ bool DecodeToPnm(std::istream& input, std::ostream& output)
         return false;
     input.seekg(0);
 
-    int maxValue = (1 << params.bitsPerSample) - 1;
-    int bytesPerSample = maxValue > 255 ? 2 : 1;
-    std::vector<uint8_t> outputBuffer(params.width * params.height * bytesPerSample * params.components);
-    auto outputInfo = FromByteArray(outputBuffer.data(), outputBuffer.size());
+    const int maxValue = (1 << params.bitsPerSample) - 1;
+    const int bytesPerSample = maxValue > 255 ? 2 : 1;
+    std::vector<uint8_t> outputBuffer(static_cast<size_t>(params.width) * params.height * bytesPerSample * params.components);
+    const auto outputInfo = FromByteArray(outputBuffer.data(), outputBuffer.size());
     result = JpegLsDecodeStream(outputInfo, inputInfo, &params, nullptr);
     if (result != ApiResult::OK)
         return false;
@@ -359,7 +358,7 @@ bool DecodeToPnm(std::istream& input, std::ostream& output)
         }
     }
 
-    int magicNumber = params.components == 3 ? 6 : 5;
+    const int magicNumber = params.components == 3 ? 6 : 5;
     output << 'P' << magicNumber << std::endl << params.width << ' ' << params.height << std::endl << maxValue << std::endl;
     output.write(reinterpret_cast<char*>(outputBuffer.data()), outputBuffer.size());
 
@@ -371,7 +370,7 @@ std::vector<int> readPnmHeader(std::istream& pnmFile)
 {
     std::vector<int> readValues;
 
-    char first = static_cast<char>(pnmFile.get());
+    const auto first = static_cast<char>(pnmFile.get());
 
     // All portable anymap format (PNM) start with the character P.
     if (first != 'P')
@@ -401,13 +400,13 @@ std::vector<int> readPnmHeader(std::istream& pnmFile)
 //          into the JPEG-LS format. The 2 binary formats P5 and P6 are supported:
 //          Portable GrayMap: P5 = binary, extension = .pgm, 0-2^16 (gray scale)
 //          Portable PixMap: P6 = binary, extension.ppm, range 0-2^16 (RGB)
-bool EncodePnm(std::istream& pnmFile, std::ostream& jlsFileStream)
+bool EncodePnm(std::istream& pnmFile, const std::ostream& jlsFileStream)
 {
     std::vector<int> readValues = readPnmHeader(pnmFile);
     if (readValues.size() !=4)
         return false;
 
-    JlsParameters params = JlsParameters();
+    JlsParameters params{};
     params.components = readValues[0] == 6 ? 3 : 1;
     params.width = readValues[1];
     params.height = readValues[2];
@@ -415,7 +414,7 @@ bool EncodePnm(std::istream& pnmFile, std::ostream& jlsFileStream)
     params.interleaveMode = params.components == 3 ? InterleaveMode::Line : InterleaveMode::None;
 
     const int bytesPerSample = (params.bitsPerSample + 7) / 8;
-    std::vector<uint8_t> inputBuffer(params.width * params.height * bytesPerSample * params.components);
+    std::vector<uint8_t> inputBuffer(static_cast<size_t>(params.width) * params.height * bytesPerSample * params.components);
     pnmFile.read(reinterpret_cast<char*>(inputBuffer.data()), inputBuffer.size());
     if (!pnmFile.good())
         return false;
@@ -429,8 +428,8 @@ bool EncodePnm(std::istream& pnmFile, std::ostream& jlsFileStream)
         }
     }
 
-    auto rawStreamInfo = FromByteArray(inputBuffer.data(), inputBuffer.size());
-    ByteStreamInfo jlsStreamInfo = {jlsFileStream.rdbuf(), nullptr, 0};
+    const auto rawStreamInfo = FromByteArray(inputBuffer.data(), inputBuffer.size());
+    const ByteStreamInfo jlsStreamInfo = {jlsFileStream.rdbuf(), nullptr, 0};
 
     size_t bytesWritten = 0;
     JpegLsEncodeStream(jlsStreamInfo, bytesWritten, rawStreamInfo, params, nullptr);
@@ -460,17 +459,17 @@ bool ComparePnm(std::istream& pnmFile1, std::istream& pnmFile2)
         return false;
     }
 
-    auto width = header1[1];
-    if (width != header2[1])
+    const size_t width = header1[1];
+    if (width != static_cast<size_t>(header2[1]))
     {
-        printf("Width %i is not equal with width %i\r\n", width, header2[1]);
+        printf("Width %zu is not equal with width %i\r\n", width, header2[1]);
         return false;
     }
 
-    auto height = header1[2];
-    if (height != header2[2])
+    const size_t height = header1[2];
+    if (height != static_cast<size_t>(header2[2]))
     {
-        printf("Height %i is not equal with height %i\r\n", height, header2[2]);
+        printf("Height %zu is not equal with height %i\r\n", height, header2[2]);
         return false;
     }
 
@@ -479,24 +478,24 @@ bool ComparePnm(std::istream& pnmFile1, std::istream& pnmFile2)
         printf("max-value %i is not equal with max-value %i\r\n", header1[3], header2[3]);
         return false;
     }
-    auto bytesPerSample = header1[3] > 255 ? 2 : 1;
+    const auto bytesPerSample = header1[3] > 255 ? 2 : 1;
 
-    size_t byteCount = width * height * bytesPerSample;
+    const size_t byteCount = width * height * bytesPerSample;
     std::vector<uint8_t> bytes1(byteCount);
     std::vector<uint8_t> bytes2(byteCount);
 
     pnmFile1.read(reinterpret_cast<char*>(&bytes1[0]), byteCount);
     pnmFile2.read(reinterpret_cast<char*>(&bytes2[0]), byteCount);
 
-    for (auto x = 0; x < height; ++x)
+    for (size_t x = 0; x < height; ++x)
     {
-        for (auto y = 0; y < width; y += bytesPerSample)
+        for (size_t y = 0; y < width; y += bytesPerSample)
         {
             if (bytesPerSample == 1)
             {
                 if (bytes1[(x * width) + y] != bytes2[(x * width) + y])
                 {
-                    printf("Values of the 2 files are different, height:%i, width:%i\r\n", x, y);
+                    printf("Values of the 2 files are different, height:%zu, width:%zu\r\n", x, y);
                     return false;
                 }
             }
@@ -505,7 +504,7 @@ bool ComparePnm(std::istream& pnmFile1, std::istream& pnmFile2)
                 if (bytes1[(x * width) + y] != bytes2[(x * width) + y] ||
                     bytes1[(x * width) + (y + 1)] != bytes2[(x * width) + (y + 1)])
                 {
-                    printf("Values of the 2 files are different, height:%i, width:%i\r\n", x, y);
+                    printf("Values of the 2 files are different, height:%zu, width:%zu\r\n", x, y);
                     return false;
                 }
             }
@@ -544,12 +543,12 @@ bool ComparePnm(std::istream& pnmFile1, std::istream& pnmFile2)
 ApiResult DecodeRaw(const char* strNameEncoded, const char* strNameOutput)
 {
     std::fstream jlsFile(strNameEncoded, mode_input);
-    ByteStreamInfo compressedByteStream = {jlsFile.rdbuf(), nullptr, 0};
+    const ByteStreamInfo compressedByteStream{jlsFile.rdbuf(), nullptr, 0};
 
     std::fstream rawFile(strNameOutput, mode_output);
-    ByteStreamInfo rawStream = {rawFile.rdbuf(), nullptr, 0};
+    const ByteStreamInfo rawStream{rawFile.rdbuf(), nullptr, 0};
 
-    auto value = JpegLsDecodeStream(rawStream, compressedByteStream, nullptr, nullptr);
+    const auto value = JpegLsDecodeStream(rawStream, compressedByteStream, nullptr, nullptr);
     jlsFile.close();
     rawFile.close();
 
@@ -628,13 +627,13 @@ int main(int argc, char* argv[])
     for (int i = 1; i < argc; ++i)
     {
         std::string str = argv[i];
-        if (str.compare("-unittest") == 0)
+        if (str == "-unittest")
         {
             UnitTest();
             continue;
         }
 
-        if (str.compare("-decoderaw") == 0)
+        if (str == "-decoderaw")
         {
             if (i != 1 || argc != 4)
             {
@@ -644,7 +643,7 @@ int main(int argc, char* argv[])
             return DecodeRaw(argv[2], argv[3]) == ApiResult::OK ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        if (str.compare("-decodetopnm") == 0)
+        if (str == "-decodetopnm")
         {
             if (i != 1 || argc != 4)
             {
@@ -657,7 +656,7 @@ int main(int argc, char* argv[])
             return DecodeToPnm(jlsFile, pnmFile) ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        if (str.compare("-encodepnm") == 0)
+        if (str == "-encodepnm")
         {
             if (i != 1 || argc != 4)
             {
@@ -670,7 +669,7 @@ int main(int argc, char* argv[])
             return EncodePnm(pnmFile,jlsFile) ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        if (str.compare("-comparepnm") == 0)
+        if (str == "-comparepnm")
         {
             if (i != 1 || argc != 4)
             {
@@ -683,7 +682,7 @@ int main(int argc, char* argv[])
             return ComparePnm(pnmFile1, pnmFile2) ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 
-        if (str.compare("-bitstreamdamage") == 0)
+        if (str == "-bitstreamdamage")
         {
             DamagedBitstreamTests();
             continue;
@@ -736,13 +735,13 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        if (str.compare("-dicom") == 0)
+        if (str == "-dicom")
         {
             TestDicomWG4Images();
             continue;
         }
 
-        if (str.compare("-dontwait") == 0)
+        if (str == "-dontwait")
         {
             wait = false;
             continue;

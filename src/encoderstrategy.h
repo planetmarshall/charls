@@ -111,7 +111,7 @@ protected:
             throw charls_error(charls::ApiResult::CompressedBufferTooSmall);
 
         const std::size_t bytesCount = _position - _buffer.data();
-        const std::size_t bytesWritten = static_cast<std::size_t>(_compressedStream->sputn(reinterpret_cast<char*>(_buffer.data()), _position - _buffer.data()));
+        const auto bytesWritten = static_cast<std::size_t>(_compressedStream->sputn(reinterpret_cast<char*>(_buffer.data()), _position - _buffer.data()));
 
         if (bytesWritten != bytesCount)
             throw charls_error(charls::ApiResult::CompressedBufferTooSmall);

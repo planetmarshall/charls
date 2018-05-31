@@ -20,12 +20,12 @@ void Triplet2Planar(std::vector<uint8_t>& rgbyte, Size size)
 {
     std::vector<uint8_t> rgbytePlanar(rgbyte.size());
 
-    int cbytePlane = size.cx * size.cy;
-    for (int index = 0; index < cbytePlane; index++)
+    const size_t cbytePlane = static_cast<size_t>(size.cx) * size.cy;
+    for (size_t index = 0; index < cbytePlane; index++)
     {
-        rgbytePlanar[index]                 = rgbyte[index * 3 + 0];
-        rgbytePlanar[index + 1*cbytePlane]  = rgbyte[index * 3 + 1];
-        rgbytePlanar[index + 2*cbytePlane]  = rgbyte[index * 3 + 2];
+        rgbytePlanar[index] = rgbyte[index * 3 + 0];
+        rgbytePlanar[index + 1 * cbytePlane] = rgbyte[index * 3 + 1];
+        rgbytePlanar[index + 2 * cbytePlane] = rgbyte[index * 3 + 2];
     }
     std::swap(rgbyte, rgbytePlanar);
 }
@@ -41,10 +41,12 @@ bool VerifyEncodedBytes(const void* uncompressedData, size_t uncompressedLength,
     std::vector<uint8_t> ourEncodedBytes(compressedLength + 16);
     size_t bytesWriten;
     error = JpegLsEncode(ourEncodedBytes.data(), ourEncodedBytes.size(), &bytesWriten, uncompressedData, uncompressedLength, &info, nullptr);
+    if (error != ApiResult::OK)
+        return false;
 
     for (size_t i = 0; i < compressedLength; ++i)
     {
-        if ((reinterpret_cast<const uint8_t*>(compressedData)[i]) != ourEncodedBytes[i])
+        if (static_cast<const uint8_t*>(compressedData)[i] != ourEncodedBytes[i])
         {
             return false;
         }
@@ -56,7 +58,7 @@ bool VerifyEncodedBytes(const void* uncompressedData, size_t uncompressedLength,
 
 void TestCompliance(const uint8_t* compressedBytes, size_t compressedLength, const uint8_t* rgbyteRaw, size_t cbyteRaw, bool bcheckEncode)
 {
-    JlsParameters info = JlsParameters();
+    JlsParameters info{};
     auto err = JpegLsReadHeader(compressedBytes, compressedLength, &info, nullptr);
     Assert::IsTrue(err == ApiResult::OK);
 
@@ -65,7 +67,7 @@ void TestCompliance(const uint8_t* compressedBytes, size_t compressedLength, con
         Assert::IsTrue(VerifyEncodedBytes(rgbyteRaw, cbyteRaw, compressedBytes, compressedLength));
     }
 
-    std::vector<uint8_t> rgbyteOut(info.height *info.width * ((info.bitsPerSample + 7) / 8) * info.components);
+    std::vector<uint8_t> rgbyteOut(static_cast<size_t>(info.height) *info.width * ((info.bitsPerSample + 7) / 8) * info.components);
 
     err = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), compressedBytes, compressedLength, nullptr, nullptr);
     Assert::IsTrue(err == ApiResult::OK);
@@ -91,7 +93,7 @@ void DecompressFile(const char* strNameEncoded, const char* strNameRaw, int ioff
     if (!ReadFile(strNameEncoded, &rgbyteFile))
         return;
 
-    JlsParameters params;
+    JlsParameters params{};
     if (JpegLsReadHeader(rgbyteFile.data(), rgbyteFile.size(), &params, nullptr) != ApiResult::OK)
     {
         Assert::IsTrue(false);
@@ -192,7 +194,6 @@ void TestConformance()
     // Test 3
     DecompressFile("test/conformance/T8C2E0.JLS", "test/conformance/TEST8.PPM", 15);
 
-
     // Test 4
     DecompressFile("test/conformance/T8C0E3.JLS", "test/conformance/TEST8.PPM",15);
 
@@ -201,7 +202,6 @@ void TestConformance()
 
     // Test 6
     DecompressFile("test/conformance/T8C2E3.JLS", "test/conformance/TEST8.PPM",15);
-
 
     // Test 7
     // Test 8

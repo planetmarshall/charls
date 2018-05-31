@@ -20,7 +20,7 @@ void TestDamagedBitStream1()
         return;
 
     std::vector<uint8_t> rgbyteOut(256 * 256 * 2);
-    auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
+    const auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
     Assert::IsTrue(error == charls::ApiResult::InvalidCompressedData);
 }
 
@@ -35,7 +35,7 @@ void TestDamagedBitStream2()
     rgbyteCompressed.resize(40000,3);
 
     std::vector<uint8_t> rgbyteOut(512 * 512);
-    auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
+    const auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
     Assert::IsTrue(error == charls::ApiResult::InvalidCompressedData);
 }
 
@@ -50,7 +50,7 @@ void TestDamagedBitStream3()
     rgbyteCompressed[301] = 0xFF;
 
     std::vector<uint8_t> rgbyteOut(512 * 512);
-    auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
+    const auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), rgbyteCompressed.data(), rgbyteCompressed.size(), nullptr, nullptr);
     Assert::IsTrue(error == charls::ApiResult::InvalidCompressedData);
 }
 
@@ -65,7 +65,7 @@ void TestFileWithRandomHeaderDamage(const char* filename)
 
     std::vector<uint8_t> rgbyteOut(512 * 512);
 
-    for (int i = 0; i < 40; ++i)
+    for (size_t i = 0; i < 40; ++i)
     {
         std::vector<uint8_t> rgbyteCompressedTest(rgbyteCompressedOrg);
         std::vector<int> errors(10, 0);
@@ -77,7 +77,7 @@ void TestFileWithRandomHeaderDamage(const char* filename)
             rgbyteCompressedTest[i+2] = static_cast<uint8_t>(rand());
             rgbyteCompressedTest[i+3] = static_cast<uint8_t>(rand());
 
-            auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), &rgbyteCompressedTest[0], rgbyteCompressedTest.size(), nullptr, nullptr);
+            const auto error = JpegLsDecode(rgbyteOut.data(), rgbyteOut.size(), &rgbyteCompressedTest[0], rgbyteCompressedTest.size(), nullptr, nullptr);
             errors[static_cast<int>(error)]++;
         }
 

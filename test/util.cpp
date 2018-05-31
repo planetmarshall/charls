@@ -4,9 +4,8 @@
 
 
 #include "util.h"
-#include "time.h"
 #include "portable_anymap_file.h"
-
+#include "gettime.h"
 #include <iostream>
 #include <vector>
 
@@ -16,10 +15,10 @@ using namespace charls;
 namespace
 {
 
-bool IsMachineLittleEndian()
+bool IsMachineLittleEndian() noexcept
 {
-    int a = 0xFF000001;
-    char* chars = reinterpret_cast<char*>(&a);
+    const int a = 0xFF000001;
+    const char* chars = reinterpret_cast<const char*>(&a);
     return chars[0] == 0x01;
 }
 
@@ -38,7 +37,7 @@ void FixEndian(std::vector<uint8_t>* rgbyte, bool littleEndianData)
 }
 
 
-bool ReadFile(const char* filename, std::vector<uint8_t>* pvec, int offset, int bytes)
+bool ReadFile(const char* filename, std::vector<uint8_t>* pvec, long offset, size_t bytes)
 {
     FILE* pfile = fopen(filename, "rb");
     if (!pfile)
@@ -48,15 +47,15 @@ bool ReadFile(const char* filename, std::vector<uint8_t>* pvec, int offset, int 
     }
 
     fseek(pfile, 0, SEEK_END);
-    const int cbyteFile = static_cast<int>(ftell(pfile));
+    const auto cbyteFile = static_cast<int>(ftell(pfile));
     if (offset < 0)
     {
         Assert::IsTrue(bytes != 0);
-        offset = cbyteFile - bytes;
+        offset = static_cast<long>(cbyteFile - bytes);
     }
     if (bytes == 0)
     {
-        bytes = cbyteFile - offset;
+        bytes = static_cast<size_t>(cbyteFile) - offset;
     }
 
     fseek(pfile, offset, SEEK_SET);
@@ -86,8 +85,8 @@ void TestRoundTrip(const char* strName, const std::vector<uint8_t>& rgbyteRaw, S
     JlsParameters params = JlsParameters();
     params.components = ccomp;
     params.bitsPerSample = cbit;
-    params.height = size.cy;
-    params.width = size.cx;
+    params.height = static_cast<int>(size.cy);
+    params.width = static_cast<int>(size.cx);
 
     TestRoundTrip(strName, rgbyteRaw, params, loopCount);
 }
@@ -97,7 +96,7 @@ void TestRoundTrip(const char* strName, const std::vector<uint8_t>& rgbyteRaw, J
 {
     std::vector<uint8_t> rgbyteCompressed(params.height * params.width * params.components * params.bitsPerSample / 4);
 
-    std::vector<uint8_t> rgbyteOut(params.height * params.width * ((params.bitsPerSample + 7) / 8) * params.components);
+    std::vector<uint8_t> rgbyteOut(static_cast<size_t>(params.height) * params.width * ((params.bitsPerSample + 7) / 8) * params.components);
 
     if (params.components == 4)
     {
@@ -126,13 +125,13 @@ void TestRoundTrip(const char* strName, const std::vector<uint8_t>& rgbyteRaw, J
     }
     const double dwtimeDecodeComplete = getTime();
 
-    const double bitspersample = compressedLength * 8 * 1.0 / (params.components * params.height * params.width);
+    const double bitspersample = 1.0 * compressedLength * 8 / (static_cast<double>(params.components) * params.height * params.width);
     std::cout << "RoundTrip test for: " << strName << "\n\r";
     const double encodeTime = (dwtimeEncodeComplete - dwtimeEncodeStart) / loopCount;
     const double decodeTime = (dwtimeDecodeComplete - dwtimeDecodeStart) / loopCount;
-    const double symbolRate = (params.components * params.height * params.width) / (1000.0 * decodeTime);
+    const double symbolRate = (static_cast<double>(params.components) * params.height * params.width) / (1000.0 * decodeTime);
     printf("Size:%4dx%4d, Encode time:%7.2f ms, Decode time:%7.2f ms, Bits per sample:%5.2f, Decode rate:%5.1f M/s \n\r", params.width, params.height, encodeTime, decodeTime, bitspersample, symbolRate);
-    uint8_t* pbyteOut = &rgbyteOut[0];
+    const uint8_t* pbyteOut = rgbyteOut.data();
     for (size_t i = 0; i < rgbyteOut.size(); ++i)
     {
         if (rgbyteRaw[i] != pbyteOut[i])
@@ -146,7 +145,7 @@ void TestRoundTrip(const char* strName, const std::vector<uint8_t>& rgbyteRaw, J
 
 void TestFile(const char* filename, int ioffs, Size size2, int cbit, int ccomp, bool littleEndianFile, int loopCount)
 {
-    const int byteCount = size2.cx * size2.cy * ccomp * ((cbit + 7)/8);
+    const size_t byteCount = size2.cx * size2.cy * ccomp * ((cbit + 7)/8);
     std::vector<uint8_t> rgbyteUncompressed;
 
     if (!ReadFile(filename, &rgbyteUncompressed, ioffs, byteCount))

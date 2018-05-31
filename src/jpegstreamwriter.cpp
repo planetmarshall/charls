@@ -39,7 +39,7 @@ bool IsDefault(const JpegLSPresetCodingParameters& custom) noexcept
 }
 
 
-JpegStreamWriter::JpegStreamWriter()
+JpegStreamWriter::JpegStreamWriter() noexcept
     : _data(),
       _byteOffset(0),
       _lastCompenentIndex(0)

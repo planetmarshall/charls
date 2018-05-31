@@ -36,7 +36,7 @@ void VerifyInput(const ByteStreamInfo& uncompressedStream, const JlsParameters& 
 
     if (uncompressedStream.rawData)
     {
-        if (uncompressedStream.count < static_cast<size_t>(parameters.height * parameters.width * parameters.components * (parameters.bitsPerSample > 8 ? 2 : 1)))
+        if (uncompressedStream.count < static_cast<size_t>(parameters.height) * parameters.width * parameters.components * (parameters.bitsPerSample > 8 ? 2 : 1))
             throw charls_error(ApiResult::InvalidJlsParameters, "uncompressed size does not match with the other parameters");
     }
 
@@ -218,7 +218,7 @@ extern "C"
 
 
     CHARLS_IMEXPORT(ApiResult) JpegLsDecodeRect(void* uncompressedData, size_t uncompressedLength, const void* compressedData, size_t compressedLength,
-        JlsRect roi, JlsParameters* info, char* errorMessage)
+        JlsRect roi, const JlsParameters* info, char* errorMessage)
     {
         try
         {

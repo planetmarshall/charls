@@ -18,7 +18,7 @@ struct CContextRunMode
     uint8_t N;
     uint8_t Nn;
 
-    CContextRunMode()
+    CContextRunMode() noexcept
         : A(),
           _nRItype(),
           _nReset(),

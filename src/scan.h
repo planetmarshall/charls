@@ -124,6 +124,7 @@ public:
             Info().components = 1;
         }
     }
+    WARNING_UNSUPPRESS()
 
     void SetPresets(const JpegLSPresetCodingParameters& presets) override
     {
@@ -957,13 +958,13 @@ void JlsDecoder<Traits>::DoScan()
     const int32_t pixelstride = _width + 4;
     const int components = Info().interleaveMode == charls::InterleaveMode::Line ? Info().components : 1;
 
-    std::vector<PIXEL> vectmp(2 * components * pixelstride);
+    std::vector<PIXEL> vectmp(static_cast<size_t>(2) * components * pixelstride);
     std::vector<int32_t> rgRUNindex(components);
 
     for (int32_t line = 0; line < Info().height; ++line)
     {
         _previousLine = &vectmp[1];
-        _currentLine = &vectmp[1 + components * pixelstride];
+        _currentLine = &vectmp[1 + static_cast<size_t>(components) * pixelstride];
         if ((line & 1) == 1)
         {
             std::swap(_previousLine, _currentLine);

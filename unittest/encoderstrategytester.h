@@ -14,6 +14,7 @@ public:
     {
     }
 
+    WARNING_SUPPRESS(26440)
     void SetPresets(const JpegLSPresetCodingParameters&) override
     {
     }
@@ -26,6 +27,7 @@ public:
     void DoScan() override
     {
     }
+    WARNING_UNSUPPRESS()
 
     void InitForward(ByteStreamInfo& info)
     {
@@ -42,7 +44,7 @@ public:
         Flush();
     }
 
-    std::size_t GetLengthForward() const
+    std::size_t GetLengthForward() const noexcept
     {
         return GetLength();
     }

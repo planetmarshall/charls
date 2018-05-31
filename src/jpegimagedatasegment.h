@@ -11,10 +11,10 @@
 class JpegImageDataSegment : public JpegSegment
 {
 public:
-    JpegImageDataSegment(ByteStreamInfo rawStream, const JlsParameters& params, int componentCount) :
-        _componentCount{componentCount},
-        _rawStreamInfo{rawStream},
-        _params{params}
+    JpegImageDataSegment(ByteStreamInfo rawStream, const JlsParameters& params, int componentCount) noexcept :
+        _componentCount(componentCount),
+        _rawStreamInfo(rawStream),
+        _params(params)
     {
     }
 

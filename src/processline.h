@@ -51,6 +51,7 @@ public:
         std::memcpy(rawData_, source, pixelCount * bytesPerPixel_);
         rawData_ += bytesPerLine_;
     }
+    WARNING_UNSUPPRESS()
 
 private:
     uint8_t* rawData_;
@@ -61,7 +62,7 @@ private:
 
 inline void ByteSwap(unsigned char* data, int count)
 {
-    if (count & 1)
+    if (static_cast<unsigned int>(count) & 1u)
     {
         std::ostringstream message;
         message << "An odd number of bytes (" << count << ") cannot be swapped.";
@@ -72,7 +73,7 @@ inline void ByteSwap(unsigned char* data, int count)
     for(auto i = 0; i < count / 4; i++)
     {
         const auto value = data32[i];
-        data32[i] = ((value >> 8) & 0x00FF00FF) | ((value & 0x00FF00FF) << 8);
+        data32[i] = ((value >> 8u) & 0x00FF00FFu) | ((value & 0x00FF00FFu) << 8u);
     }
 
     if ((count % 4) != 0)
@@ -220,8 +221,8 @@ class ProcessTransformed : public ProcessLine
 public:
     ProcessTransformed(ByteStreamInfo rawStream, const JlsParameters& info, TRANSFORM transform) :
         _params(info),
-        _templine(info.width * info.components),
-        _buffer(info.width * info.components * sizeof(size_type)),
+        _templine(static_cast<size_t>(info.width) * info.components),
+        _buffer(static_cast<size_t>(info.width) * info.components * sizeof(size_type)),
         _transform(transform),
         _inverseTransform(transform),
         _rawPixels(rawStream)
@@ -242,7 +243,7 @@ public:
 
     void Transform(std::basic_streambuf<char>* rawStream, void* dest, int pixelCount, int destStride)
     {
-        std::streamsize bytesToRead = pixelCount * _params.components * sizeof(size_type);
+        std::streamsize bytesToRead = static_cast<std::streamsize>(pixelCount) * _params.components * sizeof(size_type);
         while (bytesToRead != 0)
         {
             const auto read = rawStream->sgetn(reinterpret_cast<char*>(_buffer.data()), bytesToRead);
@@ -312,7 +313,7 @@ public:
     {
         if (_rawPixels.rawStream)
         {
-            const std::streamsize bytesToWrite = pixelCount * _params.components * sizeof(size_type);
+            const std::streamsize bytesToWrite = static_cast<std::streamsize>(pixelCount) * _params.components * sizeof(size_type);
             DecodeTransform(pSrc, _buffer.data(), pixelCount, sourceStride);
 
             const auto bytesWritten = _rawPixels.rawStream->sputn(reinterpret_cast<char*>(_buffer.data()), bytesToWrite);

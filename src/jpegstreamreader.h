@@ -32,7 +32,7 @@ public:
         return _params.custom;
     }
 
-    void Read(ByteStreamInfo info);
+    void Read(ByteStreamInfo rawPixels);
     void ReadHeader();
 
     void SetInfo(const JlsParameters& params) noexcept

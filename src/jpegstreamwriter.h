@@ -21,7 +21,7 @@ class JpegStreamWriter
     friend class JpegImageDataSegment;
 
 public:
-    JpegStreamWriter();
+    JpegStreamWriter() noexcept;
 
     void AddSegment(std::unique_ptr<JpegSegment> segment)
     {

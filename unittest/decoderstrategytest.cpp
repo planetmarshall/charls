@@ -22,7 +22,10 @@ public:
         Init(stream);
     }
 
-    void SetPresets(const JpegLSPresetCodingParameters& /*presets*/) override {}
+    WARNING_SUPPRESS(26440)
+    void SetPresets(const JpegLSPresetCodingParameters& /*presets*/) override
+    {
+    }
 
     std::unique_ptr<ProcessLine> CreateProcess(ByteStreamInfo /*rawStreamInfo*/) override
     {
@@ -32,6 +35,7 @@ public:
     void DoScan() override
     {
     }
+    WARNING_UNSUPPRESS()
 
     int32_t Read(int32_t length) { return ReadLongValue(length); }
     void Finish() { EndScan(); }
@@ -73,7 +77,7 @@ namespace CharLSUnitTest
             DecoderStrategyTester dec(params, encBuf, length);
             for (auto i = 0; i < sizeof(inData) / sizeof(inData[0]); i++)
             {
-                auto actual = dec.Read(inData[i].bits);
+                const auto actual = dec.Read(inData[i].bits);
                 Assert::AreEqual(inData[i].val, actual);
             }
         }

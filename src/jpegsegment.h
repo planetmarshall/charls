@@ -16,6 +16,11 @@ public:
     virtual ~JpegSegment() = default;
     virtual void Serialize(JpegStreamWriter& streamWriter) = 0;
 
+    JpegSegment(const JpegSegment&) = delete;
+    JpegSegment(JpegSegment&&) = delete;
+    JpegSegment& operator=(const JpegSegment&) = delete;
+    JpegSegment& operator=(JpegSegment&&) = delete;
+
 protected:
     JpegSegment() = default;
 };

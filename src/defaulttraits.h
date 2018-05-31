@@ -20,6 +20,8 @@
 // This is to allow the traits class to replace the default implementation here with optimized specific implementations.
 // This is done for lossless coding/decoding: see losslesstraits.h
 
+WARNING_SUPPRESS(26432)
+
 template<typename sample, typename pixel>
 struct DefaultTraits
 {
@@ -58,7 +60,10 @@ struct DefaultTraits
     {
     }
 
-    DefaultTraits &operator =(const DefaultTraits &a) = delete;
+    DefaultTraits() = delete;
+    DefaultTraits(DefaultTraits&&) = default;
+    DefaultTraits& operator=(const DefaultTraits&) = delete;
+    DefaultTraits& operator=(DefaultTraits&&) = delete;
 
     FORCE_INLINE int32_t ComputeErrVal(int32_t e) const noexcept
     {
@@ -139,5 +144,6 @@ private:
     }
 };
 
+WARNING_UNSUPPRESS()
 
 #endif
