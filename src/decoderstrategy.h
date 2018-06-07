@@ -15,7 +15,7 @@
 namespace charls
 {
 
-inline bool ContainsFF(size_t n)
+inline bool ContainsFF(size_t n) noexcept
 {
     return static_cast<uint8_t>(n) == 0xFF ||
         static_cast<uint8_t>(n >> 8) == 0xFF ||
@@ -49,7 +49,7 @@ inline bool ReadAndCheckFF(const uint8_t *p, size_t& value)
 }
 #endif
 
-inline size_t ReadAndCheckFF2(const uint8_t *p)
+inline size_t ReadAndCheckFF2(const uint8_t *p) noexcept
 {
     size_t nextCache = *p;
     if (nextCache == 0xFF)
