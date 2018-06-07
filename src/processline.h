@@ -40,6 +40,7 @@ public:
     {
     }
 
+    WARNING_SUPPRESS(26440)
     void NewLineRequested(void* dest, int pixelCount, int /*byteStride*/) noexcept override
     {
         std::memcpy(dest, rawData_, pixelCount * bytesPerPixel_);
