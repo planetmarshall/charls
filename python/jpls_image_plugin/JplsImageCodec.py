@@ -8,14 +8,14 @@ from ctypes import (
     Structure,
 )
 from ctypes.util import find_library
-from enum import Enum
+from enum import IntEnum
 
 from PIL.Image import Image
 from PIL.ImageFile import PyDecoder
 from PIL.ImageFile import ERRORS
 
 
-class CharlsError(Enum):
+class CharlsError(IntEnum):
     CHARLS_JPEGLS_ERRC_SUCCESS = 0,
     INVALID_ARGUMENT = 1,
     PARAMETER_VALUE_NOT_SUPPORTED = 2,
@@ -57,20 +57,26 @@ class CharlsError(Enum):
     INVALID_PARAMETER_INTERLEAVE_MODE = 204
 
 
-class SpiffColorSpace(Enum):
-    CHARLS_SPIFF_COLOR_SPACE_BI_LEVEL_BLACK = 0,
-    CHARLS_SPIFF_COLOR_SPACE_YCBCR_ITU_BT_709_VIDEO = 1,
-    CHARLS_SPIFF_COLOR_SPACE_NONE = 2,
-    CHARLS_SPIFF_COLOR_SPACE_YCBCR_ITU_BT_601_1_RGB = 3,
-    CHARLS_SPIFF_COLOR_SPACE_YCBCR_ITU_BT_601_1_VIDEO = 4,
-    CHARLS_SPIFF_COLOR_SPACE_GRAYSCALE = 8,
-    CHARLS_SPIFF_COLOR_SPACE_PHOTO_YCC = 9,
-    CHARLS_SPIFF_COLOR_SPACE_RGB = 10,
-    CHARLS_SPIFF_COLOR_SPACE_CMY = 11,
-    CHARLS_SPIFF_COLOR_SPACE_CMYK = 12,
-    CHARLS_SPIFF_COLOR_SPACE_YCCK = 13,
-    CHARLS_SPIFF_COLOR_SPACE_CIE_LAB = 14,
-    CHARLS_SPIFF_COLOR_SPACE_BI_LEVEL_WHITE = 15
+class SpiffColorSpace(IntEnum):
+    BI_LEVEL_BLACK = 0,
+    YCBCR_ITU_BT_709_VIDEO = 1,
+    NONE = 2,
+    YCBCR_ITU_BT_601_1_RGB = 3,
+    YCBCR_ITU_BT_601_1_VIDEO = 4,
+    GRAYSCALE = 8,
+    PHOTO_YCC = 9,
+    RGB = 10,
+    CMY = 11,
+    CMYK = 12,
+    YCCK = 13,
+    CIE_LAB = 14,
+    BI_LEVEL_WHITE = 15
+
+
+class SpiffResolutionUnits(IntEnum):
+    ASPECT_RATIO = 0,
+    DOTS_PER_INCH = 1,
+    DOTS_PER_CENTIMETER = 2
 
 
 class JplsImageDecoder(PyDecoder):
@@ -111,18 +117,56 @@ class JplsImageEncoder():
         )
         return encoded_buffer_size.value
 
-    def encode(self, im: Image):
-        frame_info = charls_frame_info(im.width, im.height, 8, 1)
+
+    def encode(self, im: Image, fp):
+        def pixel_data(im):
+            data = im.getdata()
+            return (c_uint8 * len(data))(*data)
+
+        bits_per_component = 8
+        if im.mode == 'I;16':
+            bits_per_component = 16
+
+
+        frame_info = charls_frame_info(im.width, im.height, bits_per_component, 1)
+        print("encoding image {}x{}x{}bpp".format(im.width, im.height, bits_per_component))
         error = self._charls.charls_jpegls_encoder_set_frame_info(self.encoder, pointer(frame_info))
 
         encoded_size = self._estimate_encoded_size()
-        encoded_buffer = (c_uint8 * encoded_size)()
-        error = self._charls.charls_jpegls_encoder_set_destination_buffer(self.encoder, pointer(encoded_buffer),
-                                                                          encoded_size)
-        error = charls_jpegls_encoder_write_standard_spiff_header(encoder,
-        # error = charls_jpegls_encoder_encode_from_buffer(encoder, pixel_data, pixel_data_size, 0);
-        # error = charls_jpegls_encoder_get_bytes_written(encoder, bytes_written);
-        pass
+        print("estimated size: {}".format(encoded_size))
+        encoded_buffer = bytearray(encoded_size)
+        encoded_buffer_type = c_uint8 * encoded_size
+
+        error = self._charls.charls_jpegls_encoder_set_destination_buffer(
+            self.encoder,
+            encoded_buffer_type.from_buffer(encoded_buffer),
+            encoded_size
+        )
+        error = self._charls.charls_jpegls_encoder_write_standard_spiff_header(
+            self.encoder,
+            c_int32(SpiffColorSpace.GRAYSCALE),
+            c_int32(SpiffResolutionUnits.DOTS_PER_CENTIMETER.value),
+            0,
+            0
+        )
+
+        data = pixel_data(im)
+        error = self._charls.charls_jpegls_encoder_encode_from_buffer(
+            self.encoder,
+            pointer(data),
+            len(data),
+            0
+        )
+        bytes_written = c_size_t(0)
+        error = self._charls.charls_jpegls_encoder_get_bytes_written(
+            self.encoder,
+            pointer(bytes_written)
+        )
+
+        encoded_bytes = bytes_written.value
+        print("encoded bytes: {}".format(encoded_bytes))
+
+        fp.write(encoded_buffer[:encoded_bytes])
 
     def cleanup(self):
         self._charls.charls_jpegls_encoder_destroy(self.encoder)
