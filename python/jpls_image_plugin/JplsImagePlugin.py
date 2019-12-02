@@ -24,7 +24,7 @@ def _spiff(header):
 
 def _save(im, fp, filename):
     encoder = JplsImageEncoder()
-    encoder.encode(im)
+    encoder.encode(im, fp)
 
 
 class JplsImageFile(ImageFile.ImageFile):
