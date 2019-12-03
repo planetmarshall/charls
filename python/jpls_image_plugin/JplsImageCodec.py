@@ -1,6 +1,8 @@
+import itertools
 from ctypes import (
     cdll,
     c_uint8,
+    c_uint16,
     c_int32,
     c_uint32,
     c_size_t,
@@ -9,6 +11,7 @@ from ctypes import (
 )
 from ctypes.util import find_library
 from enum import IntEnum
+import struct
 
 from PIL.Image import Image
 from PIL.ImageFile import PyDecoder
@@ -79,6 +82,12 @@ class SpiffResolutionUnits(IntEnum):
     DOTS_PER_CENTIMETER = 2
 
 
+class InterleaveMode(IntEnum):
+    NONE = 0,
+    LINE = 1,
+    SAMPLE = 2
+
+
 class JplsImageDecoder(PyDecoder):
     def init(self, args):
         self._pulls_fd = True
@@ -89,8 +98,7 @@ class JplsImageDecoder(PyDecoder):
         buffer = self.fd.read()
         source_size_bytes = len(buffer)
         err = self._charls.charls_jpegls_decoder_set_source_buffer(self._decoder, buffer, source_size_bytes)
-        charls_err = CharlsError(err)
-
+        err = self._charls.charls_jpegls_decoder_read_header(self._decoder)
         return -1, 0
 
     def cleanup(self):
@@ -103,11 +111,37 @@ class charls_frame_info(Structure):
                 ("bits_per_sample", c_int32),
                 ("component_count", c_int32)]
 
+def _pixel_data(im, bits_per_component, number_of_components, interleave_mode=InterleaveMode.NONE):
+    data = im.getdata()
+    num_elements = number_of_components * len(data)
+    if number_of_components == 1:
+        flat_data = data
+    else:
+        if interleave_mode == InterleaveMode.SAMPLE:
+            flat_data = itertools.chain.from_iterable(data)
+        elif interleave_mode == InterleaveMode.NONE:
+            rv = []
+            gv = []
+            bv = []
+            for (r, g, b) in data:
+                rv.append(r)
+                gv.append(g)
+                bv.append(b)
+            flat_data = itertools.chain.from_iterable((rv, gv, bv))
+
+    array_type = c_uint16 if bits_per_component > 8 else c_uint8
+    return (array_type * num_elements)(*flat_data)
 
 class JplsImageEncoder():
     def __init__(self):
         self._charls = cdll.LoadLibrary('/home/andrew/.local/lib/libcharls.so')
         self.encoder = self._charls.charls_jpegls_encoder_create()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
 
     def _estimate_encoded_size(self):
         encoded_buffer_size = c_size_t(0)
@@ -117,23 +151,29 @@ class JplsImageEncoder():
         )
         return encoded_buffer_size.value
 
+    def _pixel_format(self, im):
+        if im.mode == 'L':
+            pf = 8, 1
+        elif im.mode in ['I', 'I;16', 'I;16L', 'I;16B', 'I;16N']:
+            pf = 16, 1
+        elif im.mode == 'RGB':
+            pf = 8, 3
+        elif im.mode == 'RGBA':
+            pf = 8, 4
+        else:
+            raise SyntaxError("Image Mode {} not supported".format(im.mode))
+
+        bits_per_component = im.encoderinfo.get("bits_per_component", pf[0])
+        return bits_per_component, pf[1]
+
 
     def encode(self, im: Image, fp):
-        def pixel_data(im):
-            data = im.getdata()
-            return (c_uint8 * len(data))(*data)
 
-        bits_per_component = 8
-        if im.mode == 'I;16':
-            bits_per_component = 16
-
-
-        frame_info = charls_frame_info(im.width, im.height, bits_per_component, 1)
-        print("encoding image {}x{}x{}bpp".format(im.width, im.height, bits_per_component))
+        bits_per_component, components = self._pixel_format(im)
+        frame_info = charls_frame_info(im.width, im.height, bits_per_component, components)
         error = self._charls.charls_jpegls_encoder_set_frame_info(self.encoder, pointer(frame_info))
 
         encoded_size = self._estimate_encoded_size()
-        print("estimated size: {}".format(encoded_size))
         encoded_buffer = bytearray(encoded_size)
         encoded_buffer_type = c_uint8 * encoded_size
 
@@ -142,15 +182,17 @@ class JplsImageEncoder():
             encoded_buffer_type.from_buffer(encoded_buffer),
             encoded_size
         )
-        error = self._charls.charls_jpegls_encoder_write_standard_spiff_header(
-            self.encoder,
-            c_int32(SpiffColorSpace.GRAYSCALE),
-            c_int32(SpiffResolutionUnits.DOTS_PER_CENTIMETER.value),
-            0,
-            0
-        )
 
-        data = pixel_data(im)
+        if im.encoderinfo.get('spiff', True):
+            error = self._charls.charls_jpegls_encoder_write_standard_spiff_header(
+                self.encoder,
+                c_int32(SpiffColorSpace.GRAYSCALE),
+                c_int32(SpiffResolutionUnits.DOTS_PER_INCH.value),
+                72,
+                72
+            )
+
+        data = _pixel_data(im, bits_per_component, components)
         error = self._charls.charls_jpegls_encoder_encode_from_buffer(
             self.encoder,
             pointer(data),
@@ -164,7 +206,6 @@ class JplsImageEncoder():
         )
 
         encoded_bytes = bytes_written.value
-        print("encoded bytes: {}".format(encoded_bytes))
 
         fp.write(encoded_buffer[:encoded_bytes])
 
