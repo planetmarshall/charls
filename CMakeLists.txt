@@ -27,6 +27,7 @@ option(CHARLS_BUILD_TESTS "Build test application" ${MASTER_PROJECT})
 option(CHARLS_BUILD_FUZZ_TEST "Build AFL fuzzer application" ${MASTER_PROJECT})
 option(CHARLS_BUILD_SAMPLES "Build sample applications" ${MASTER_PROJECT})
 option(CHARLS_INSTALL "Generate the install target." ${MASTER_PROJECT})
+option(CHARLS_INSTALL_PYTHON "Install the Python pillow plugin" ${MASTER_PROJECT})
 
 # The options used by the CI builds to ensure the source remains warning free.
 # Not enabled by default to make CharLS package and end-user friendly.
@@ -145,4 +146,12 @@ endif()
 
 if(CHARLS_BUILD_SAMPLES)
   add_subdirectory(samples)
+endif()
+
+if (CHARLS_INSTALL_PYTHON)
+  INSTALL(
+          DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/charls DESTINATION python
+          FILES_MATCHING PATTERN *.py
+          PATTERN __pycache__ EXCLUDE
+  )
 endif()
