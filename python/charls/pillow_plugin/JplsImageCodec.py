@@ -9,17 +9,22 @@ from ctypes import (
     pointer,
     Structure,
 )
-from ctypes.util import find_library
 from enum import IntEnum
-import struct
+from itertools import chain, islice
+
 
 from PIL.Image import Image
 from PIL.ImageFile import PyDecoder
-from PIL.ImageFile import ERRORS
 
 
-class CharlsError(IntEnum):
-    CHARLS_JPEGLS_ERRC_SUCCESS = 0,
+class InterleaveMode(IntEnum):
+    NONE = 0,
+    LINE = 1,
+    SAMPLE = 2
+
+
+class CharlsErrorCode(IntEnum):
+    SUCCESS = 0,
     INVALID_ARGUMENT = 1,
     PARAMETER_VALUE_NOT_SUPPORTED = 2,
     DESTINATION_BUFFER_TOO_SMALL = 3,
@@ -82,60 +87,117 @@ class SpiffResolutionUnits(IntEnum):
     DOTS_PER_CENTIMETER = 2
 
 
-class InterleaveMode(IntEnum):
-    NONE = 0,
-    LINE = 1,
-    SAMPLE = 2
+class CharlsError(Exception):
+    def __init__(self, charls_error_code):
+        self.message = charls_error_code.name
+        self.error_code = charls_error_code
+
+
+def _interleave_pixels(pixels, interleave_step):
+    component_index = list(range(0, len(pixels)+1, interleave_step))
+    return chain.from_iterable(zip(*(pixels[a:b] for (a, b) in zip(component_index[:-1], component_index[1:]))))
+
+
+def _interleave_decoded_pixels(pixels, num_components, interleave_mode):
+    if interleave_mode == InterleaveMode.NONE:
+        return _interleave_pixels(pixels, len(pixels)//num_components)
+    else:
+        return pixels
+
+
+def _interleave_pixels_for_encoding(pixels, num_components, interleave_mode):
+    if interleave_mode == InterleaveMode.NONE:
+        return _interleave_pixels(pixels, num_components)
+    else:
+        return pixels
+
+
+def _encode_pixels(pixels, bits_per_component):
+    if bits_per_component <= 8:
+        return bytes(pixels)
+
+
+def _pixel_data_for_encoding(im, bits_per_component, number_of_components, interleave_mode):
+    data = im.getdata()
+    num_elements = number_of_components * len(data)
+    if number_of_components == 1:
+        flat_data = data
+    else:
+        flat_data = _interleave_pixels_for_encoding(
+            list(itertools.chain.from_iterable(data)),
+            num_components=number_of_components,
+            interleave_mode=interleave_mode)
+
+    array_type = c_uint16 if bits_per_component > 8 else c_uint8
+    return (array_type * num_elements)(*flat_data)
 
 
 class JplsImageDecoder(PyDecoder):
     def init(self, args):
         self._pulls_fd = True
-        self._charls = cdll.LoadLibrary('/home/andrew/.local/lib/libcharls.so')
+        self._charls = cdll.LoadLibrary('libcharls.so')
         self._decoder = self._charls.charls_jpegls_decoder_create()
+
+    def call_charls_decode(self, fn, *args):
+        err = fn(self._decoder, *args)
+        if err != CharlsErrorCode.SUCCESS:
+            raise CharlsError(CharlsErrorCode(err))
 
     def decode(self, buffer):
         buffer = self.fd.read()
         source_size_bytes = len(buffer)
-        err = self._charls.charls_jpegls_decoder_set_source_buffer(self._decoder, buffer, source_size_bytes)
-        err = self._charls.charls_jpegls_decoder_read_header(self._decoder)
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_set_source_buffer, buffer, source_size_bytes)
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_read_header)
+        frame_info = FrameInfo()
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_get_frame_info, pointer(frame_info))
+        interleave_mode = c_int32()
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_get_interleave_mode, pointer(interleave_mode))
+        destination_size = c_size_t(0)
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_get_destination_size, pointer(destination_size))
+        destination_buffer = (c_uint8 * destination_size.value)()
+        self.call_charls_decode(
+            self._charls.charls_jpegls_decoder_decode_to_buffer,
+            pointer(destination_buffer),
+            destination_size.value,
+            0
+        )
+        raw_pixels = destination_buffer if frame_info.component_count == 1 else _encode_pixels(
+            _interleave_decoded_pixels(
+                destination_buffer,
+                num_components=frame_info.component_count,
+                interleave_mode=InterleaveMode(interleave_mode.value)
+            ), frame_info.bits_per_sample)
+
+        self.set_as_raw(raw_pixels)
         return -1, 0
 
     def cleanup(self):
         self._charls.charls_jpegls_decoder_destroy(self._decoder)
 
 
-class charls_frame_info(Structure):
+class FrameInfo(Structure):
     _fields_ = [("width", c_uint32),
                 ("height", c_uint32),
                 ("bits_per_sample", c_int32),
                 ("component_count", c_int32)]
 
-def _pixel_data(im, bits_per_component, number_of_components, interleave_mode=InterleaveMode.NONE):
-    data = im.getdata()
-    num_elements = number_of_components * len(data)
-    if number_of_components == 1:
-        flat_data = data
-    else:
-        if interleave_mode == InterleaveMode.SAMPLE:
-            flat_data = itertools.chain.from_iterable(data)
-        elif interleave_mode == InterleaveMode.NONE:
-            rv = []
-            gv = []
-            bv = []
-            for (r, g, b) in data:
-                rv.append(r)
-                gv.append(g)
-                bv.append(b)
-            flat_data = itertools.chain.from_iterable((rv, gv, bv))
 
-    array_type = c_uint16 if bits_per_component > 8 else c_uint8
-    return (array_type * num_elements)(*flat_data)
+def _line_interleave_mode(mode):
+    if mode is None:
+        return InterleaveMode.NONE
 
-class JplsImageEncoder():
+    modes = {
+        'sample': InterleaveMode.SAMPLE,
+        'line': InterleaveMode.LINE,
+        'none': InterleaveMode.NONE
+    }
+    return modes[mode]
+
+
+class JplsImageEncoder:
     def __init__(self):
-        self._charls = cdll.LoadLibrary('/home/andrew/.local/lib/libcharls.so')
-        self.encoder = self._charls.charls_jpegls_encoder_create()
+        self._charls = cdll.LoadLibrary('libcharls.so')
+        self._encoder = self._charls.charls_jpegls_encoder_create()
 
     def __enter__(self):
         return self
@@ -143,10 +205,15 @@ class JplsImageEncoder():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.cleanup()
 
+    def call_charls_encode(self, fn, *args):
+        err = fn(self._encoder, *args)
+        if err != CharlsErrorCode.SUCCESS:
+            raise CharlsError(CharlsErrorCode(err))
+
     def _estimate_encoded_size(self):
         encoded_buffer_size = c_size_t(0)
         error = self._charls.charls_jpegls_encoder_get_estimated_destination_size(
-            self.encoder,
+            self._encoder,
             pointer(encoded_buffer_size)
         )
         return encoded_buffer_size.value
@@ -166,42 +233,46 @@ class JplsImageEncoder():
         bits_per_component = im.encoderinfo.get("bits_per_component", pf[0])
         return bits_per_component, pf[1]
 
-
     def encode(self, im: Image, fp):
-
         bits_per_component, components = self._pixel_format(im)
-        frame_info = charls_frame_info(im.width, im.height, bits_per_component, components)
-        error = self._charls.charls_jpegls_encoder_set_frame_info(self.encoder, pointer(frame_info))
+        frame_info = FrameInfo(im.width, im.height, bits_per_component, components)
+        error = self._charls.charls_jpegls_encoder_set_frame_info(self._encoder, pointer(frame_info))
+
+        if components > 1:
+            interleave_mode = _line_interleave_mode(im.encoderinfo.get('interleave_mode', 'sample'))
+            self.call_charls_encode(self._charls.charls_jpegls_encoder_set_interleave_mode, interleave_mode)
+        else:
+            interleave_mode = InterleaveMode.NONE
 
         encoded_size = self._estimate_encoded_size()
         encoded_buffer = bytearray(encoded_size)
         encoded_buffer_type = c_uint8 * encoded_size
 
         error = self._charls.charls_jpegls_encoder_set_destination_buffer(
-            self.encoder,
+            self._encoder,
             encoded_buffer_type.from_buffer(encoded_buffer),
             encoded_size
         )
 
         if im.encoderinfo.get('spiff', True):
             error = self._charls.charls_jpegls_encoder_write_standard_spiff_header(
-                self.encoder,
+                self._encoder,
                 c_int32(SpiffColorSpace.GRAYSCALE),
                 c_int32(SpiffResolutionUnits.DOTS_PER_INCH.value),
                 72,
                 72
             )
 
-        data = _pixel_data(im, bits_per_component, components)
+        data = _pixel_data_for_encoding(im, bits_per_component, components, interleave_mode)
         error = self._charls.charls_jpegls_encoder_encode_from_buffer(
-            self.encoder,
+            self._encoder,
             pointer(data),
             len(data),
             0
         )
         bytes_written = c_size_t(0)
         error = self._charls.charls_jpegls_encoder_get_bytes_written(
-            self.encoder,
+            self._encoder,
             pointer(bytes_written)
         )
 
@@ -210,4 +281,4 @@ class JplsImageEncoder():
         fp.write(encoded_buffer[:encoded_bytes])
 
     def cleanup(self):
-        self._charls.charls_jpegls_encoder_destroy(self.encoder)
+        self._charls.charls_jpegls_encoder_destroy(self._encoder)
