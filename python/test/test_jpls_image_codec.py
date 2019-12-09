@@ -1,4 +1,4 @@
-from charls.pillow_plugin.JplsImageCodec import (
+from charls.pillow_plugin.jpls_image_codec import (
     _interleave_pixels_for_encoding,
     _interleave_decoded_pixels,
     InterleaveMode

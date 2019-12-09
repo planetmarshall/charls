@@ -1,7 +1,7 @@
 import struct
 
 from PIL import ImageFile
-from charls.pillow_plugin.JplsImageCodec import JplsImageEncoder
+from charls.pillow_plugin.jpls_image_codec import JplsImageEncoder
 
 
 def _accept(header):

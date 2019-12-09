@@ -9,8 +9,11 @@ from ctypes import (
     pointer,
     Structure,
 )
+import ctypes.util
 from enum import IntEnum
-from itertools import chain, islice
+from itertools import chain
+import os
+import platform
 
 
 from PIL.Image import Image
@@ -132,10 +135,29 @@ def _pixel_data_for_encoding(im, bits_per_component, number_of_components, inter
     return (array_type * num_elements)(*flat_data)
 
 
+def _find_charls():
+    if 'CHARLS_LIBRARY' in os.environ:
+        return os.environ['CHARLS_LIBRARY']
+    if platform.system() == 'Windows':
+        bits, linkage = platform.architecture()
+        lib_name = {
+            '64bit': 'charls-2-x64',
+            '32bit': 'charls-2-x86'
+        }
+        return ctypes.util.find_library(lib_name[bits])
+
+    return 'libcharls.so'
+
+
 class JplsImageDecoder(PyDecoder):
     def init(self, args):
         self._pulls_fd = True
-        self._charls = cdll.LoadLibrary('libcharls.so')
+        try:
+            self._charls = cdll.LoadLibrary(_find_charls())
+        except OSError as err:
+            raise OSError("Couldn't find charls shared library. "\
+                          "Ensure it is in the PATH or set the CHARLS_LIBRARY environment variable to its full path.")
+
         self._decoder = self._charls.charls_jpegls_decoder_create()
 
     def call_charls_decode(self, fn, *args):
