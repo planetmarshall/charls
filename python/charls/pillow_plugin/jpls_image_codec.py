@@ -1,11 +1,13 @@
 import itertools
 from ctypes import (
+    windll,
     cdll,
     c_uint8,
     c_uint16,
     c_int32,
     c_uint32,
     c_size_t,
+    c_void_p,
     pointer,
     Structure,
 )
@@ -149,16 +151,23 @@ def _find_charls():
     return 'libcharls.so'
 
 
-class JplsImageDecoder(PyDecoder):
-    def init(self, args):
-        self._pulls_fd = True
-        try:
-            self._charls = cdll.LoadLibrary(_find_charls())
-        except OSError as err:
-            raise OSError("Couldn't find charls shared library. "\
-                          "Ensure it is in the PATH or set the CHARLS_LIBRARY environment variable to its full path.")
+def _load_charls():
+    try:
+        if platform.system() == "Windows":
+            return windll.LoadLibrary(_find_charls())
+        return cdll.LoadLibrary(_find_charls())
+    except Exception as err:
+        raise OSError("Couldn't load charls shared library. "
+                      "Ensure it is in the PATH or set the CHARLS_LIBRARY environment variable to its full path.", err)
 
-        self._decoder = self._charls.charls_jpegls_decoder_create()
+
+class JplsImageDecoder(PyDecoder):
+    def __init__(self, mode, *args):
+        super().__init__(mode, *args)
+        self._pulls_fd = True
+        self._charls = _load_charls()
+        self._charls.charls_jpegls_decoder_create.restype = c_void_p
+        self._decoder = c_void_p(self._charls.charls_jpegls_decoder_create())
 
     def call_charls_decode(self, fn, *args):
         err = fn(self._decoder, *args)
@@ -166,9 +175,10 @@ class JplsImageDecoder(PyDecoder):
             raise CharlsError(CharlsErrorCode(err))
 
     def decode(self, buffer):
-        buffer = self.fd.read()
+        buffer = bytearray(self.fd.read())
         source_size_bytes = len(buffer)
-        self.call_charls_decode(self._charls.charls_jpegls_decoder_set_source_buffer, buffer, source_size_bytes)
+        source_buffer = (c_uint8 * source_size_bytes).from_buffer(buffer)
+        self.call_charls_decode(self._charls.charls_jpegls_decoder_set_source_buffer, pointer(source_buffer), source_size_bytes)
         self.call_charls_decode(self._charls.charls_jpegls_decoder_read_header)
         frame_info = FrameInfo()
         self.call_charls_decode(self._charls.charls_jpegls_decoder_get_frame_info, pointer(frame_info))
@@ -218,8 +228,9 @@ def _line_interleave_mode(mode):
 
 class JplsImageEncoder:
     def __init__(self):
-        self._charls = cdll.LoadLibrary('libcharls.so')
-        self._encoder = self._charls.charls_jpegls_encoder_create()
+        self._charls = _load_charls()
+        self._charls.charls_jpegls_encoder_create.restype = c_void_p
+        self._encoder = c_void_p(self._charls.charls_jpegls_encoder_create())
 
     def __enter__(self):
         return self
