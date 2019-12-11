@@ -1,7 +1,5 @@
 import itertools
 from ctypes import (
-    windll,
-    cdll,
     c_uint8,
     c_uint16,
     c_int32,
@@ -154,8 +152,11 @@ def _find_charls():
 def _load_charls():
     try:
         if platform.system() == "Windows":
+            from ctypes import windll
             return windll.LoadLibrary(_find_charls())
-        return cdll.LoadLibrary(_find_charls())
+        else:
+            from ctypes import cdll
+            return cdll.LoadLibrary(_find_charls())
     except Exception as err:
         raise OSError("Couldn't load charls shared library. "
                       "Ensure it is in the PATH or set the CHARLS_LIBRARY environment variable to its full path.", err)
