@@ -4,7 +4,9 @@ from io import BytesIO
 from PIL import Image
 import pytest
 
-from charls import pillow_plugin
+from charls import init_pillow_plugin
+
+init_pillow_plugin()
 
 
 @pytest.mark.parametrize("source_image, encoded_image, kwargs",[

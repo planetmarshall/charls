@@ -71,5 +71,3 @@ class JplsImageFile(ImageFile.ImageFile):
         self.tile = [
             ("jpeg_ls", (0, 0) + self.size, 0, (self.mode, 0))
         ]
-
-
